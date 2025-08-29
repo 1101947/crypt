@@ -1,7 +1,7 @@
 package main
 
 import (
-	"pdk/internal"
+	"argon2id/internal"
 	"fmt"
 	"os"
 	"syscall"

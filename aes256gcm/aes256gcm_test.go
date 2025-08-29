@@ -1,4 +1,4 @@
-package internal 
+package aes256gcm 
 
 import (
 	"testing"

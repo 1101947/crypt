@@ -1,7 +1,8 @@
 package main
 
 import (
-	"pdk/internal"
+	"YSNP2/rand"
+	"YSNP2/argon2id/internal"
 	"fmt"
 	"os"
 	"syscall"
@@ -31,8 +32,15 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	p := internal.NewParams()
-	hashed, err := internal.Hash([]byte(pass), p)
+	p := internal.NewDefaultParams()
+	// IS Salt vaule(p.saltLength correct?)
+	salt, err := rand.Salt(p.GetSaltLength()) 
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	hashed, err := internal.Hash([]byte(pass), salt, p)
 	if err != nil {
 		fmt.Println(err)
 		return

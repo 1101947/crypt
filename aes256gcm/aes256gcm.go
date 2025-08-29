@@ -1,4 +1,4 @@
-package internal 
+package aes256gcm 
 
 import (
 	"crypto/aes"
@@ -31,7 +31,7 @@ func Encrypt(key32 [32]byte, data []byte) ([]byte, error) {
 	return sealed, nil
 }
 
-func decrypt(key32 [32]byte, data []byte) ([]byte, error) {
+func Decrypt(key32 [32]byte, data []byte) ([]byte, error) {
 	decrypted := []byte{} 
 	key := []byte{}
 	key = key32[:]

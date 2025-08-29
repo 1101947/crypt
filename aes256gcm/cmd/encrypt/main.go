@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"symm_crypt/internal"
+	"aes256-gcm/internal"
 	"os"
 )
 

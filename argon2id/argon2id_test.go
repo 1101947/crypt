@@ -1,4 +1,4 @@
-package internal
+package argon2id 
 
 import (
 	"testing"
