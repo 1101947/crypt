@@ -1,8 +1,8 @@
-package hash_and_crypt
+package symm 
 
 import (
-	"YSNP2/kdf"
-	"YSNP2/symm_crypt"
+	"crypt/kdf"
+	"crypt/symm_crypt"
 )
 
 type Header struct {

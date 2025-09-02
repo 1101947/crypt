@@ -1,4 +1,4 @@
-package hash_and_crypt
+package symm 
 
 import (
 	"testing"

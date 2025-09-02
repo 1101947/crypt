@@ -1,11 +1,12 @@
 package main
 
 import (
-	"YSNP2/rand"
-	"YSNP2/argon2id/internal"
 	"fmt"
 	"os"
 	"syscall"
+
+	//"crypt/rand"
+	"crypt/argon2id"
 
 	"golang.org/x/term"
 )
@@ -28,22 +29,26 @@ func cli() (string, error) {
 }
 
 func main() {
-	pass, err := cli() 
+	err := argon2id.RunCLI()
 	if err != nil {
 		fmt.Println(err)
 	}
-	p := internal.NewDefaultParams()
-	// IS Salt vaule(p.saltLength correct?)
-	salt, err := rand.Salt(p.GetSaltLength()) 
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	hashed, err := internal.Hash([]byte(pass), salt, p)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(hashed)
+//	pass, err := cli() 
+//	if err != nil {
+//		fmt.Println(err)
+//	}
+//	p := internal.NewDefaultParams()
+//	// IS Salt vaule(p.saltLength correct?)
+//	salt, err := rand.Salt(p.GetSaltLength()) 
+//	if err != nil {
+//		fmt.Println(err)
+//		return
+//	}
+//
+//	hashed, err := internal.Hash([]byte(pass), salt, p)
+//	if err != nil {
+//		fmt.Println(err)
+//		return
+//	}
+//	fmt.Println(hashed)
 }
