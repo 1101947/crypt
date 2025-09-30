@@ -110,11 +110,6 @@ func (i Input) Hash() output {
 	return outpuT
 }
 
-func (o output) ToPHCString() string {
-	b64Salt := base64.RawStdEncoding.EncodeToString(o.salt)
-	b64Hash := base64.RawStdEncoding.EncodeToString(o.hashedSecret)
-	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", o.version, o.memory, o.iterations, o.parallelism, b64Salt, b64Hash)
-}
 //
 //func FromStringToPHC(s string) output {
 //}
@@ -140,3 +135,20 @@ func Compare(secret []byte, o output) (bool, error) {
 	return isEqual, nil
 }
 
+func (o Output) String(sType format.StringType) (string, error) {
+	basedOutput := o.Base64()
+	if sType == format.JSON {
+		str, err := format.ToJsonString()
+		if err != nil {
+			return "", err
+		}
+		return str, nil
+	} else if sType == format.PHC {
+		str := o.ToPHCString()
+		return str
+	} else if sType == format.GO {
+		str := o.ToGoString()
+		return str
+	} 
+	return "", fmt.Errof("invalid string format type: %s", sType)
+}
