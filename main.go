@@ -1,6 +1,9 @@
 package main 
 
-import ()
+import (
+	"crypt/cmd"
+)
 
 func main() {
+	cmd.Execute()
 }
