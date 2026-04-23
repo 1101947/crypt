@@ -7,13 +7,8 @@ import (
 	"crypto/rand"
 )
 
-func Encrypt(key32 [32]byte, data []byte) ([]byte, error) {
+func Encrypt(key, data []byte) ([]byte, error) {
 	sealed := []byte{}
-	key := []byte{}
-	key = key32[:]
-	for k, v := range key32 {
-		key[k] = v
-	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return sealed, err
@@ -22,8 +17,8 @@ func Encrypt(key32 [32]byte, data []byte) ([]byte, error) {
 	if err != nil {
 		return sealed, err
 	}
-	// TODO : consider other ways of creating nonce
-	nonce := make([]byte, aesGCM.NonceSize())
+	//nonce := make([]byte, aesGCM.NonceSize())
+	nonce := make([]byte, aesGCM.NonceSize(), aesGCM.NonceSize()+len(data)+aesGCM.Overhead())
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
 		return sealed, err
 	}
@@ -31,10 +26,8 @@ func Encrypt(key32 [32]byte, data []byte) ([]byte, error) {
 	return sealed, nil
 }
 
-func Decrypt(key32 [32]byte, data []byte) ([]byte, error) {
+func Decrypt(key, data []byte) ([]byte, error) {
 	decrypted := []byte{} 
-	key := []byte{}
-	key = key32[:]
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return decrypted, err
