@@ -6,12 +6,24 @@ import (
 	//"bufio"
 	//"strings"
 	"os"
-	"fmt"
+	//"fmt"
 )
 
 func main() {
 	router := NewRouter()
 	err := router.HandleFunc([]string{"version"}, VersionCMD)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = router.HandleFunc([]string{"help"}, HelpCMD)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = router.HandleFunc([]string{"encrypt"}, EncryptCMD)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = router.HandleFunc([]string{"decrypt"}, DecryptCMD)
 	if err != nil {
 		log.Fatal(err)
 	}
