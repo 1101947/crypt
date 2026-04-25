@@ -3,13 +3,15 @@ package main
 import (
 	"os"
 	"fmt"
+	"strings"
 	"encoding/json"
 	"crypto/rand"
-	"golang.org/x/term"
-
-
 	"crypt/encrypted"
 	"crypt/argon2id"
+
+	"golang.org/x/term"
+	"github.com/1101947/cliargumentrouter/cmdrouter"
+
 )
 
 type cryptData struct {
@@ -107,5 +109,63 @@ func (c cryptData) Decrypt() error {
 		return fmt.Errorf("Encrypting got: %w", err)
 	}
 	os.WriteFile(c.destPath, decrypted, 0644)
+	return nil
+}
+
+type Router map[string]cmdrouter.Handler
+
+func NewRouter() Router {
+	return Router{}
+}
+
+func (R Router) Handle(path []string, h cmdrouter.Handler) error {
+	p := strings.Join(path, " ")
+	if _, ok := R[p]; ok {
+		return fmt.Errorf("Key is already exists.")
+	}
+	R[p] = h 
+	return nil
+}
+
+func (R Router) HandleFunc(path []string, fn cmdrouter.ProcesserFunc) error {
+	p := strings.Join(path, " ")
+	if _, ok := R[p]; ok {
+		return fmt.Errorf("Key is already exists.")
+	}
+	R[p] = fn 
+	return nil
+}
+
+
+func (R Router) Process(posargs []string) error {
+	h, foundOn, err := R.findHandler(posargs)
+	if err != nil {
+		return err
+	}
+	posargs = posargs[:foundOn]
+	err = h.Process(posargs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (R Router) findHandler(posargs []string) (cmdrouter.Handler, int, error) {
+	for  i:=0;i<len(posargs);i++ {
+		p := strings.Join(posargs[i:], " ")
+		h, ok := R[p]
+		if ok {
+			return h, i, nil
+		}
+	}
+	return nil, 0, fmt.Errorf("Handler not found")
+}
+
+func GetVersion() string {
+	return "v0"
+}
+
+func VersionCMD(posargs []string) error {
+	fmt.Println(GetVersion())
 	return nil
 }
