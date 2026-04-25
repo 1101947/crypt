@@ -138,6 +138,10 @@ func (R Router) HandleFunc(path []string, fn cmdrouter.ProcesserFunc) error {
 
 
 func (R Router) Process(posargs []string) error {
+	if len(posargs) == 0 {
+		fmt.Println(GetHelpMsg())
+		return nil
+	}
 	h, foundOn, err := R.findHandler(posargs)
 	if err != nil {
 		return err
@@ -160,18 +164,20 @@ func (R Router) findHandler(posargs []string) (cmdrouter.Handler, int, error) {
 	}
 	return nil, 0, fmt.Errorf("Handler not found")
 }
-
-func GetVersion() string {
-	return "v0"
-}
+//
+//func GetVersion() string {
+//	version := "v0"
+//	return version 
+//}
 
 func VersionCMD(posargs []string) error {
-	fmt.Println(GetVersion())
+	fmt.Println(version)
 	return nil
 }
 
 func GetHelpMsg() string {
-	return "Help!"
+	helpMsg := "Help!"
+	return helpMsg 
 }
 
 func HelpCMD(posargs []string) error {

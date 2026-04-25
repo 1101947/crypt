@@ -9,6 +9,9 @@ import (
 	//"fmt"
 )
 
+var version string = "NOVERSION"
+var isBuilt string = "false"
+
 func main() {
 	router := NewRouter()
 	err := router.HandleFunc([]string{"version"}, VersionCMD)
@@ -27,7 +30,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = router.Process(os.Args[2:])
+	args := []string{}
+	if isBuilt == "true" {
+		if len(args) == 1 {
+			args = []string{}
+		} else {
+			args = os.Args[1:]
+		}
+	} else {
+		args = os.Args[2:]
+	}
+	err = router.Process(args)
 	if err != nil {
 		log.Fatal(err)
 	}

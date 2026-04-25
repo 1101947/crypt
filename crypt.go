@@ -13,10 +13,11 @@ import (
 	"golang.org/x/term"
 	//"github.com/1101947/cliargumentrouter/cmdrouter"
 )
-//
-//type EncrtyptHandler struct {
-//	Interactive string
-//}
+
+type EncryptHandler struct {
+	cryptData cryptData
+	interactive string
+}
 
 func EncryptCMD(posargs []string) error {
 	fmt.Println("Encrypt: ")
