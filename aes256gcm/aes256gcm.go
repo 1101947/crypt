@@ -1,9 +1,9 @@
 package aes256gcm 
 
 import (
+	"io"
 	"crypto/aes"
 	"crypto/cipher"
-	"io"
 	"crypto/rand"
 )
 

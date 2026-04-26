@@ -41,3 +41,6 @@ func Decrypt(symmCryptFunc string, key []byte, encrypted []byte) ([]byte, error)
 	}
 	return nil, fmt.Errorf("Ivalid type of symetric function") 
 }
+
+
+
