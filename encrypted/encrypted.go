@@ -18,6 +18,11 @@ type Header struct {
 	Kdf argon2id.Params
 }
 
+type chunk struct {
+	cipherBytes []byte
+	aeadTag []byt
+}
+
 // TODO: Encrypt/DecryptBytes should take input *[]byte, output *[]byte
 func (H Header) Encrypt(key, data []byte) ([]byte, error) {
 	derivedKey, err := (H.Kdf).Hash(key)

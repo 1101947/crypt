@@ -24,6 +24,26 @@ func Encrypt(key []byte, data []byte) ([]byte, error) {
 	return encrypted, nil
 }
 
+func EncryptPtr(key, nonce, plainData, cipherData []byte) error {
+// Consider: should i add check for key length or chacha20poly1305.NewX() already does that ? 
+//	if len(key) != chacha20poly1305.KeySize {
+//		return fmt.Errorf("Key length is not %d", chacha20poly1305.KeySize)
+//	}
+	aead, err := chacha20poly1305.NewX(key)
+	if err != nil {
+		return err
+	}
+	if len(nonce) != chacha20poly1305.NonceSizeX {
+		return fmt.Errorf("Invalid nonce size, must be %d bytes, but got: %d", chacha20poly1305.NonceSizeX, len(nonce))
+	}
+	if len(cipherData) < len(plainData) + aead.Overhead() {
+		return fmt.Errorf("Cipherdata buffer is too short. Must be at least %d bytes , but got: %d bytes", (len(plainData) + aead.Overhead()), len(cipherData))
+	}
+	newCipherData = aead.Seal(cipherData[:0], nonce, data, nil)
+	return nil
+}
+
+
 func Decrypt(key, encrypted []byte) ([]byte, error) {
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
@@ -38,4 +58,20 @@ func Decrypt(key, encrypted []byte) ([]byte, error) {
 		return nil, err
 	}
 	return decrypted, nil
+}
+
+
+func DecryptPtr(key, nonce, cipherData, plainData []byte) error {
+	aead, err := chacha20poly1305.NewX(key)
+	if err != nil {
+		return err
+	}
+	if len(nonce) != chacha20poly1305.NonceSizeX {
+		return fmt.Errorf("Invalid nonce size, must be %d bytes, but got: %d", chacha20poly1305.NonceSizeX, len(nonce))
+	}
+	if len(plainData) < len(cipherData) + aead.Overhead() {
+		return fmt.Errorf("Plaindata buffer is too short. Must be at least %d bytes , but got: %d bytes", (len(cipherData) + aead.Overhead()), len(plainData))
+	}
+	newPlainData, err := aead.Open(plainData, nonce, cipherData, nil)
+	return err 
 }
