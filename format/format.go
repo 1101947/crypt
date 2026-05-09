@@ -9,19 +9,19 @@ package format
 // Escaped - not shure if it have any usecase, mabe for storing in popular serialization formats like json, yaml
 // type Escaped
 
+
 type FileHeader struct {
 	Magic [4]byte // CRPT
 	Version int64 // version as a Timestamp 
 	IsValid bool
 	IsLittleEndian bool
-	ArgonParamsLen uint8
-	ArgonParams argon2id.Params
-	NonceSourceLen uint8
-	NonceSource []byte
 	EncryptionFunction [16]byte 
+	ArgonParamsLen uint8
+	NonceSourceLen uint8
 	ChunkSize uint8
 	ChunksAmount uint8
 	LastChunkSize uint8
+	ArgonParams argon2id.Header
 }
 
 func (F FileHeader) Verify() error {
@@ -153,6 +153,27 @@ func (F FileHeader) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
+func (F FileHeader) Write(file *os.File) error {
+	headerBytes, err := F.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("Marshaling header to bytes, got: %w", err)
+	}
+	n, err := file.WriteAt(headerBytes, 0)
+	if err != nil {
+		return err
+	}
+	if n != HeaderSize {
+		return fmt.Errorf("Wrote too many or too little bytes of header.")
+	}
+	return nil
+}
+
+func (F *FileHeader) Read(file *os.File) error {
+
+	err := F.UnmarshalBinary(data []byte) error {
+
+}
+
 func (F FileHeader) Encrypt(input io.Reader, output string) error {
 	key, err := secret.GetKey(F.ArgonParams)
 	if err != nil {
@@ -174,17 +195,6 @@ func (F FileHeader) Encrypt(input io.Reader, output string) error {
 			if err == io.EOF {
 				F.ChunksAmount = chunkPosition
 				F.LastChunkSize = lastChunkSize
-				headerBytes, err := F.MarshalBinary()
-				if err != nil {
-					return fmt.Errorf("Marshaling header to bytes, got: %w", err)
-				}
-				n, err := outputFl.WriteAt(headerBytes, 0)
-				if err != nil {
-					return err
-				}
-				if n != HeaderSize {
-					return fmt.Errorf("Wrote too many or too little bytes of header.")
-				}
 				return nil
 			}
 			if err != nil {
@@ -218,3 +228,7 @@ func (F FileHeader) Encrypt(input io.Reader, output string) error {
 	return fmt.Errorf("Unknown symmetric encryption function :%s", F.EncryptionFunction)
 }
 
+
+func (F FileHeader) Encrypt(input io.Reader, output string) error {
+
+}

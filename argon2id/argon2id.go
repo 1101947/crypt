@@ -8,13 +8,17 @@ import (
 )
 
 type Params struct {
-	Version int64  
-	SaltLength uint32
+	Header Header
 	Salt []byte
+}
+
+type Header struct {
+	Version int64  
 	Iterations uint32
 	Memory uint32
 	Parallelism uint8
 	KeyLength uint32
+	SaltLength uint32
 }
 
 func (P *Params) MarshalBinary() (data []byte, err error) {

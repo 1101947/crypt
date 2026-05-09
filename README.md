@@ -10,6 +10,8 @@
 Escaped - not sure if it has any usecase, maybe if human readability or hign noise level resistance needed.
 // type Escaped struct {}
 
+- adding authentication(AEAD/HMAC for header)
+
 ## File format description:
 File format consists of Header, fixed size chunks and final chunk with variable(from 1 byte to size of fixed size chunk - 1 byte).
 Header consists of fields:
