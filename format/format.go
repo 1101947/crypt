@@ -16,7 +16,6 @@ type FileHeader struct {
 	IsValid bool
 	IsLittleEndian bool
 	EncryptionFunction [16]byte 
-	ArgonParamsLen uint8
 	NonceSourceLen uint8
 	ChunkSize uint8
 	ChunksAmount uint8
@@ -33,146 +32,178 @@ func (F FileHeader) Verify() error {
 	}
 }
 
-func (F FileHeader) MarshalBinary() (data []byte, err error) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, F.Magic)
-	if err != nil {
-		return nil, fmt.Errorf("Writing magic, got: %w", err) 
-	}
-	err := binary.Write(buf, binary.LittleEndian, F.Version)
-	if err != nil {
-		return nil, fmt.Errorf("Writing version, got: %w", err) 
-	}
-	err := binary.Write(buf, binary.LittleEndian, F.IsValid)
-	if err != nil {
-		return nil, fmt.Errorf("Writing validity flag, got: %w", err) 
-	}
-	err := binary.Write(buf, binary.LittleEndian, F.IsLittleEndian)
-	if err != nil {
-		return nil, fmt.Errorf("Writing little-endiannes flag, got: %w", err) 
-	}
-	argonParamsBytes, err := F.ArgonParams.MarshalBinary()
-	if err != nil {
-		return nil, fmt.Errorf("Marshaling argon params to bytes, got: %w", err) 
-	}
-	F.ArgonParamsLen = len(argonParamsBytes)
-	err := binary.Write(buf, binary.LittleEndian, F.ArgonParamsLen)
-	if err != nil {
-		return nil, fmt.Errorf("Writing argon params length, got: %w", err) 
-	}
-	_, err := buf.Write(argonParamsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("Writing argon params, got: %w", err) 
-	}
+const (
+	FlagIsValid = 1 << 0 // 1
+	FlagIsLittleEndian = 1 << 1 //2
 
-	err := binary.Write(buf, binary.LittleEndian, F.NonceSourceLen)
-	if err != nil {
-		return nil, fmt.Errorf("Writing nonce source length, got: %w", err) 
+)
+
+func (F *FileHeader) Encode(data *[128]byte) {
+	start := 0
+	end := start + len(F.Magic) 
+	_ = copy(data[start:end], F.Magic[:])
+
+	start = end
+	end = start + 8 
+	binary.LittleEndian.PutUint64(data[start:end], uint64(F.Version))
+
+	start = end
+	end = start + 1
+	data[start] = 0
+	if F.IsValid {
+		data[start] |= FlagIsValid
+	} 
+	if F.IsLittleEndian {
+		data[start] |= FlagIsLittleEndian
 	}
-	_, err := buf.Write(F.NonceSource)
-	if err != nil {
-		return nil, fmt.Errorf("Writing nonce source, got: %w", err) 
-	}
-	err := binary.Write(buf, binary.LittleEndian, F.EncryptionFunction)
-	if err != nil {
-		return nil, fmt.Errorf("Writing encryption function, got: %w", err) 
-	}
-	err := binary.Write(buf, binary.LittleEndian, F.ChunkSize)
-	if err != nil {
-		return nil, fmt.Errorf("Writing chunk size, got: %w", err) 
-	}
-	err := binary.Write(buf, binary.LittleEndian, F.ChunkAmount)
-	if err != nil {
-		return nil, fmt.Errorf("Writing chunk amount, got: %w", err) 
-	}
-	err := binary.Write(buf, binary.LittleEndian, F.LastChunkSize)
-	if err != nil {
-		return nil, fmt.Errorf("Writing last chunk size, got: %w", err) 
-	}
-	return buf.Bytes(), nil
+	
+	start = end
+	end = start + len(F.EncryptionFunction) 
+	_ = copy(data[start:end], F.EncryptionFunction[:]) 
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.NonceSourceLen))
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.ChunkSize))
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.ChunkAmount))
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.LastChunkSize))
+
+	start = end
+	end = start + 34 
+	Argon2id.Encode(F.ArgonParams, start)
 }
 
-func (F FileHeader) UnmarshalBinary(data []byte) error {
-	reader := bytes.NewReader(data)
-	err := binary.Read(reader, binary.LittleEndian, F.Magic)
-	if err != nil {
-		return fmt.Errorf("Reading magic number, got: %w", err)
-	}
-	// TODO: add test for correct magick
-	err := binary.Read(reader, binary.LittleEndian, F.Version)
-	if err != nil {
-		return fmt.Errorf("Reading version, got: %w", err)
-	}
-	err := binary.Read(reader, binary.LittleEndian, F.IsValid)
-	if err != nil {
-		return fmt.Errorf("Reading validity flag, got: %w", err)
-	}
-	err := binary.Read(reader, binary.LittleEndian, F.IsLittleEndian)
-	if err != nil {
-		return fmt.Errorf("Reading little-endiannes flag, got: %w", err)
-	}
+func (F *FileHeader) Decode(data *[128]byte) {
+	start := 0
+	end := start + len(F.Magic) 
+	_ = copy(F.Magic[:], data[start:end])
 
-	err := binary.Read(reader, binary.LittleEndian, F.ArgonParamsLength)
-	if err != nil {
-		return fmt.Errorf("Reading argon params length, got: %w", err)
-	}
-	argonBytes := make([]byte, F.ArgonParamsLength)
-	_, err := io.ReadFull(reader, argonBytes)
-	if err != nil {
-		return fmt.Errorf("Reading argon params, got: %w", err)
-	}
-	err := F.ArgonParams.UnmarshalBinary(argonBytes)
-	if err != nil {
-		return fmt.Errorf("Unmarshalling argon from bytes, got: %w", err)
-	}
-	err := binary.Read(reader, binary.LittleEndian, F.NonceSourceLen)
-	if err != nil {
-		return fmt.Errorf("Reading nonce source len, got: %w", err)
-	}
-	F.NonceSource := make([]byte, F.NonceSourceLen)
-	_, err := io.ReadFull(reader, F.NonceSource)
-	if err != nil {
-		return fmt.Errorf("Reading nonce source, got: %w", err)
-	}
-	err := binary.Read(reader, binary.LittleEndian, F.EncryptionFunction)
-	if err != nil {
-		return fmt.Errorf("Reading encryption function, got: %w", err)
-	}
-	err := binary.Read(reader, binary.LittleEndian, F.ChunkSize)
-	if err != nil {
-		return fmt.Errorf("Reading chunk size, got: %w", err)
-	}
-	err := binary.Read(reader, binary.LittleEndian, F.ChunksAmount)
-	if err != nil {
-		return fmt.Errorf("Reading chunks amount, got: %w", err)
-	}
-	err := binary.Read(reader, binary.LittleEndian, F.LastChunkSize)
-	if err != nil {
-		return fmt.Errorf("Reading chunks amount, got: %w", err)
-	}
-	return nil
+	start = end
+	end = start + 8 
+	F.Version = int64(binary.LittleEndian.Uint64(data[start:end]))
+
+	start = end
+	end = start + 1
+	f.IsValid = (data[start] & FlagIsValid) != 0
+	f.IsLittleEndian = (data[start] & FlagIsLittleEndian) != 0
+
+	start = end
+	end = start + len(F.EncryptionFunction) 
+	_ = copy(data[start:end], F.EncryptionFunction) 
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.NonceSourceLen))
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.ChunkSize))
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.ChunkAmount))
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint8(data[start:end], uint8(F.LastChunkSize))
+
+	start = end
+	end = start + 1
+	Argon2id.Decode(F.ArgonParams, start)
 }
 
-func (F FileHeader) Write(file *os.File) error {
-	headerBytes, err := F.MarshalBinary()
-	if err != nil {
-		return fmt.Errorf("Marshaling header to bytes, got: %w", err)
-	}
-	n, err := file.WriteAt(headerBytes, 0)
-	if err != nil {
-		return err
-	}
-	if n != HeaderSize {
-		return fmt.Errorf("Wrote too many or too little bytes of header.")
-	}
-	return nil
-}
+//
+//func (F FileHeader) UnmarshalBinary(data []byte) error {
+//	reader := bytes.NewReader(data)
+//	err := binary.Read(reader, binary.LittleEndian, F.Magic)
+//	if err != nil {
+//		return fmt.Errorf("Reading magic number, got: %w", err)
+//	}
+//	// TODO: add test for correct magick
+//	err := binary.Read(reader, binary.LittleEndian, F.Version)
+//	if err != nil {
+//		return fmt.Errorf("Reading version, got: %w", err)
+//	}
+//	err := binary.Read(reader, binary.LittleEndian, F.IsValid)
+//	if err != nil {
+//		return fmt.Errorf("Reading validity flag, got: %w", err)
+//	}
+//	err := binary.Read(reader, binary.LittleEndian, F.IsLittleEndian)
+//	if err != nil {
+//		return fmt.Errorf("Reading little-endiannes flag, got: %w", err)
+//	}
+//
+//	err := binary.Read(reader, binary.LittleEndian, F.ArgonParamsLength)
+//	if err != nil {
+//		return fmt.Errorf("Reading argon params length, got: %w", err)
+//	}
+//	argonBytes := make([]byte, F.ArgonParamsLength)
+//	_, err := io.ReadFull(reader, argonBytes)
+//	if err != nil {
+//		return fmt.Errorf("Reading argon params, got: %w", err)
+//	}
+//	err := F.ArgonParams.UnmarshalBinary(argonBytes)
+//	if err != nil {
+//		return fmt.Errorf("Unmarshalling argon from bytes, got: %w", err)
+//	}
+//	err := binary.Read(reader, binary.LittleEndian, F.NonceSourceLen)
+//	if err != nil {
+//		return fmt.Errorf("Reading nonce source len, got: %w", err)
+//	}
+//	F.NonceSource := make([]byte, F.NonceSourceLen)
+//	_, err := io.ReadFull(reader, F.NonceSource)
+//	if err != nil {
+//		return fmt.Errorf("Reading nonce source, got: %w", err)
+//	}
+//	err := binary.Read(reader, binary.LittleEndian, F.EncryptionFunction)
+//	if err != nil {
+//		return fmt.Errorf("Reading encryption function, got: %w", err)
+//	}
+//	err := binary.Read(reader, binary.LittleEndian, F.ChunkSize)
+//	if err != nil {
+//		return fmt.Errorf("Reading chunk size, got: %w", err)
+//	}
+//	err := binary.Read(reader, binary.LittleEndian, F.ChunksAmount)
+//	if err != nil {
+//		return fmt.Errorf("Reading chunks amount, got: %w", err)
+//	}
+//	err := binary.Read(reader, binary.LittleEndian, F.LastChunkSize)
+//	if err != nil {
+//		return fmt.Errorf("Reading chunks amount, got: %w", err)
+//	}
+//	return nil
+//}
+//
+//func (F FileHeader) Write(file *os.File) error {
+//	headerBytes, err := F.MarshalBinary()
+//	if err != nil {
+//		return fmt.Errorf("Marshaling header to bytes, got: %w", err)
+//	}
+//	n, err := file.WriteAt(headerBytes, 0)
+//	if err != nil {
+//		return err
+//	}
+//	if n != HeaderSize {
+//		return fmt.Errorf("Wrote too many or too little bytes of header.")
+//	}
+//	return nil
+//}
 
 func (F *FileHeader) Read(file *os.File) error {
 
 	err := F.UnmarshalBinary(data []byte) error {
 
 }
+
 
 func (F FileHeader) Encrypt(input io.Reader, output string) error {
 	key, err := secret.GetKey(F.ArgonParams)
