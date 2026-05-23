@@ -2,15 +2,19 @@ package argon2id
 
 import (
 	"fmt"
+	"encoding/binary"
 
 	//"crypto/rand"
 	"golang.org/x/crypto/argon2"
 )
 
+
 type Params struct {
 	Header Header
 	Salt []byte
 }
+
+const HeaderSize = 28
 
 type Header struct {
 	Version int64  
@@ -23,6 +27,10 @@ type Header struct {
 
 func (H *Header) Encode(data *[128]byte, start int) error {
 	// Length: 8 + 4 * 4 + 1 = 25 
+	if (len(data) - start) < HeaderSize {
+		return fmt.Errorf("Header will not fit in given array with offset of: %d", start)
+	}
+
 	end := start + 8
 	binary.LittleEndian.PutUint64(data[start:end], uint64(H.Version))
 
@@ -44,13 +52,17 @@ func (H *Header) Encode(data *[128]byte, start int) error {
 
 	start = end
 	end = start + 1 
-	binary.LittleEndian.PutUint8(data[start:end], H.Parallelism)
+	binary.LittleEndian.PutUint16(data[start:end], uint16(H.Parallelism))
+	return nil
 } 
 
 func (H *Header) Decode(data *[128]byte, start int) error {
+	if (len(data) - start) < HeaderSize {
+		return fmt.Errorf("Header can not fit in given array with offset of: %d", start)
+	}
 	// Length: 8 + 4 * 4 + 1 = 25 
 	end := start + 8
-	H.Version = int64(binary.LittleEndian.Uint64(data[start:end])
+	H.Version = int64(binary.LittleEndian.Uint64(data[start:end]))
 
 	start = end
 	end = start + 4
@@ -70,7 +82,8 @@ func (H *Header) Decode(data *[128]byte, start int) error {
 
 	start = end
 	end = start + 1 
-	H.Parallelism = binary.LittleEndian.Uint8(data[start:end])
+	H.Parallelism = uint8(binary.LittleEndian.Uint16(data[start:end]))
+	return nil
 } 
 
 
@@ -147,9 +160,9 @@ func (P Params) Hash(key []byte) ([]byte, error) {
 //	if len(key) != int(P.KeyLength) {
 //		return nil, fmt.Errorf("Provided key length: %d differs from the one stated in params: %d ", len(key), P.KeyLength)
 //	}
-	if len(P.Salt) != int(P.SaltLength) {
-		return nil, fmt.Errorf("Provided salt length: %d differs from the one stated in params: %d ", len(P.Salt), P.SaltLength)
+	if len(P.Salt) != int(P.Header.SaltLength) {
+		return nil, fmt.Errorf("Provided salt length: %d differs from the one stated in params: %d ", len(P.Salt), P.Header.SaltLength)
 	}
-	hashKey := argon2.IDKey(key, P.Salt, P.Iterations, P.Memory, P.Parallelism, P.KeyLength)
+	hashKey := argon2.IDKey(key, P.Salt, P.Header.Iterations, P.Header.Memory, P.Header.Parallelism, P.Header.KeyLength)
 	return hashKey, nil
 }

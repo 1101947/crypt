@@ -20,7 +20,7 @@ type Header struct {
 
 type chunk struct {
 	cipherBytes []byte
-	aeadTag []byt
+	aeadTag []byte
 }
 
 // TODO: Encrypt/DecryptBytes should take input *[]byte, output *[]byte

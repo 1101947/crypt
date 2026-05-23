@@ -232,12 +232,14 @@ func (c cryptData) Encrypt() error {
 		SymmCryptFunc: c.symmCryptFuncToUse,
 		Kdf: argon2id.Params{
 			Salt: salt,
-			Version: "",
-			SaltLength: c.slen,
-			Iterations: c.iter,
-			Memory: c.mem,
-			Parallelism: c.paral,
-			KeyLength: c.klen,
+			Header: argon2id.Header{
+				Version: 0,
+				SaltLength: c.slen,
+				Iterations: c.iter,
+				Memory: c.mem,
+				Parallelism: c.paral,
+				KeyLength: c.klen,
+			},
 		},
 	}
 	key, err  := GetKey()

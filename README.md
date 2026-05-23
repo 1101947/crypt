@@ -1,7 +1,21 @@
 # Crypt
 
+Fixed-header format:
+    Encrypt():
+        Parallel access input:
+            Encrypt chunk by chunk
+        Random access input:
+            Calculate cryptChunk and dataChunk size.
+            Parallel encryption
+?TLV-chunked format
+?escaped format:
+
+Encrypt parallel/random access -> parallel 
+Decrypt parallel access -> parallel/random 
+
 ## TODO:
 - read and encrypt large streams of byte by chuncks, with io.Reader([]byte) instead of io.ReadAll([]byte)
+- store hmac/aead in header to verify it and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
 
 ## Consider:
 - adding  Steam format for streaming - each chunk have length field.

@@ -9,6 +9,27 @@ package format
 // Escaped - not shure if it have any usecase, mabe for storing in popular serialization formats like json, yaml
 // type Escaped
 
+// structure:
+/* 
+Header:
+	Magic
+	Version
+	IsValid
+	IsLittleEndian bool
+	EncryptionFunction [16]byte 
+	NonceSourceLen uint8
+	ChunkSize uint8
+	ChunksAmount uint8
+	LastChunkSize uint8
+	ArgonParams argon2id.Header
+Body:
+	Salt
+	Nonce
+	Chunk1
+	...
+	ChunkN
+	LastChunk
+*/
 
 type FileHeader struct {
 	Magic [4]byte // CRPT
@@ -121,83 +142,6 @@ func (F *FileHeader) Decode(data *[128]byte) {
 	Argon2id.Decode(F.ArgonParams, start)
 }
 
-//
-//func (F FileHeader) UnmarshalBinary(data []byte) error {
-//	reader := bytes.NewReader(data)
-//	err := binary.Read(reader, binary.LittleEndian, F.Magic)
-//	if err != nil {
-//		return fmt.Errorf("Reading magic number, got: %w", err)
-//	}
-//	// TODO: add test for correct magick
-//	err := binary.Read(reader, binary.LittleEndian, F.Version)
-//	if err != nil {
-//		return fmt.Errorf("Reading version, got: %w", err)
-//	}
-//	err := binary.Read(reader, binary.LittleEndian, F.IsValid)
-//	if err != nil {
-//		return fmt.Errorf("Reading validity flag, got: %w", err)
-//	}
-//	err := binary.Read(reader, binary.LittleEndian, F.IsLittleEndian)
-//	if err != nil {
-//		return fmt.Errorf("Reading little-endiannes flag, got: %w", err)
-//	}
-//
-//	err := binary.Read(reader, binary.LittleEndian, F.ArgonParamsLength)
-//	if err != nil {
-//		return fmt.Errorf("Reading argon params length, got: %w", err)
-//	}
-//	argonBytes := make([]byte, F.ArgonParamsLength)
-//	_, err := io.ReadFull(reader, argonBytes)
-//	if err != nil {
-//		return fmt.Errorf("Reading argon params, got: %w", err)
-//	}
-//	err := F.ArgonParams.UnmarshalBinary(argonBytes)
-//	if err != nil {
-//		return fmt.Errorf("Unmarshalling argon from bytes, got: %w", err)
-//	}
-//	err := binary.Read(reader, binary.LittleEndian, F.NonceSourceLen)
-//	if err != nil {
-//		return fmt.Errorf("Reading nonce source len, got: %w", err)
-//	}
-//	F.NonceSource := make([]byte, F.NonceSourceLen)
-//	_, err := io.ReadFull(reader, F.NonceSource)
-//	if err != nil {
-//		return fmt.Errorf("Reading nonce source, got: %w", err)
-//	}
-//	err := binary.Read(reader, binary.LittleEndian, F.EncryptionFunction)
-//	if err != nil {
-//		return fmt.Errorf("Reading encryption function, got: %w", err)
-//	}
-//	err := binary.Read(reader, binary.LittleEndian, F.ChunkSize)
-//	if err != nil {
-//		return fmt.Errorf("Reading chunk size, got: %w", err)
-//	}
-//	err := binary.Read(reader, binary.LittleEndian, F.ChunksAmount)
-//	if err != nil {
-//		return fmt.Errorf("Reading chunks amount, got: %w", err)
-//	}
-//	err := binary.Read(reader, binary.LittleEndian, F.LastChunkSize)
-//	if err != nil {
-//		return fmt.Errorf("Reading chunks amount, got: %w", err)
-//	}
-//	return nil
-//}
-//
-//func (F FileHeader) Write(file *os.File) error {
-//	headerBytes, err := F.MarshalBinary()
-//	if err != nil {
-//		return fmt.Errorf("Marshaling header to bytes, got: %w", err)
-//	}
-//	n, err := file.WriteAt(headerBytes, 0)
-//	if err != nil {
-//		return err
-//	}
-//	if n != HeaderSize {
-//		return fmt.Errorf("Wrote too many or too little bytes of header.")
-//	}
-//	return nil
-//}
-
 func (F *FileHeader) Read(file *os.File) error {
 
 	err := F.UnmarshalBinary(data []byte) error {
@@ -205,24 +149,77 @@ func (F *FileHeader) Read(file *os.File) error {
 }
 
 
-func (F FileHeader) Encrypt(input io.Reader, output string) error {
-	key, err := secret.GetKey(F.ArgonParams)
+func (F FileHeader) Encrypt(src io.Reader, key []byte, dstFile string) error {
+//	key, err := secret.GetKey(F.ArgonParams)
+//	if err != nil {
+//		return fmt.Errorf("Getting key got: %w", err)
+//	}
+	f, err := os.Create(dstFile)
 	if err != nil {
-		return fmt.Errorf("Getting key got: %w", err)
+		return fmt.Errorf("Creating file, got: %w", err)
 	}
+	defer f.Close()
+
+	var header [128]byte
+	(*F.FileHeader).Encode(*header)
+	f.Write(header)
+	if err != nil {
+		return err
+	}
+	if n != len(header) {
+		return fmt.Errorf("Number of writen bytes and length of header doesnt match.")
+	}
+
+	F.WriteBody(input io.Reader, key []byte)
+
+	n, err := f.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+	if n != 0 {
+		return fmt.Errorf("Expected offset to be zero, but got: %d", n)
+	}
+
+	(*F.FileHeader).Encode(*header)
+	n, err := f.Write(header[:])
+	if err != nil {
+		return err
+	}
+	if n != len(header) {
+		return fmt.Errorf("Number of writen bytes and length of header doesnt match.")
+	}
+	return nil
+}
+
+func (F FileHeader) WriteBody(src io.Reader, dst *os.File, key, salt, nonceSource []byte) {
+	n, err := dst.Write(salt)
+	if err != nil {
+		return fmt.Errorf("Writing salt, got: %w", err)
+	}
+	if n != len(salt) {
+		return fmt.Errorf("Wrote lesser than salt length.")
+	}
+	//if len(salt) != F.ArgonParams.SaltLength {}
+
+	n, err := dst.Write(nonceSource)
+	if err != nil {
+		return fmt.Errorf("Writing nonce source, got: %w", err)
+	}
+	if n != len(salt) {
+		return fmt.Errorf("Wrote lesser than nonce source length.")
+	}
+	//if len(salt) != F.NonceSourceLen {}
+
 	if F.EncryptionFunction == "aes256gcm" {
 		// TODO: check if boundaries is ok 
 		overhead := aes256gcm.GetOverhead(key, plainData)
 		plainDataChunkSize := F.ChunkSize - overhead
-		plainData := make([]byte, plainDataChunkSize)
+		// TODO: add check if plainDataCunkSize is positive
+		dataBuff := make([]byte, plainDataChunkSize)
 		chunkPosition := 0
 		var lastChunkSize int
-		outputFl, err := os.Create(output)
-		if err != nil {
-			return err
-		}
 		for {
-			nRead, err := input.Read(plainData)
+			nRead, err := src.Read(dataBuff)
 			if err == io.EOF {
 				F.ChunksAmount = chunkPosition
 				F.LastChunkSize = lastChunkSize
@@ -232,13 +229,12 @@ func (F FileHeader) Encrypt(input io.Reader, output string) error {
 				return fmt.Errorf("Reading bytes from reader, got: %w", err)
 			}
 			if nRead > 0 {
-				nonce := GenerateNonce(chunkPosition, F.NonceSource)
+				nonce := GenerateNonce(chunkPosition, nonceSource)
 				err := aes256gcm.EncryptPtr(key, nonce, plainData, cipherData)
 				if err != nil {
 					return fmt.Errorf("Encrypting with aes256gcm, got: %w", err)
 				}
-	
-				nWriten, err := outputWR.Write(cipherData)
+				nWriten, err := dst.Write(cipherData)
 				if err != nil {
 					return fmt.Errorf("Writing cipherdata, got: %w",)
 				}
@@ -260,6 +256,3 @@ func (F FileHeader) Encrypt(input io.Reader, output string) error {
 }
 
 
-func (F FileHeader) Encrypt(input io.Reader, output string) error {
-
-}

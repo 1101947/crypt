@@ -39,7 +39,7 @@ func EncryptPtr(key, nonce, plainData, cipherData []byte) error {
 	if len(cipherData) < len(plainData) + aead.Overhead() {
 		return fmt.Errorf("Cipherdata buffer is too short. Must be at least %d bytes , but got: %d bytes", (len(plainData) + aead.Overhead()), len(cipherData))
 	}
-	newCipherData = aead.Seal(cipherData[:0], nonce, data, nil)
+	_ = aead.Seal(cipherData[:0], nonce, plainData, nil)
 	return nil
 }
 
@@ -72,6 +72,6 @@ func DecryptPtr(key, nonce, cipherData, plainData []byte) error {
 	if len(plainData) < len(cipherData) + aead.Overhead() {
 		return fmt.Errorf("Plaindata buffer is too short. Must be at least %d bytes , but got: %d bytes", (len(cipherData) + aead.Overhead()), len(plainData))
 	}
-	newPlainData, err := aead.Open(plainData, nonce, cipherData, nil)
+	_, err = aead.Open(plainData, nonce, cipherData, nil)
 	return err 
 }

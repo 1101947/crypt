@@ -1,7 +1,9 @@
 package crypt 
 
 import (
+	"io"
 	"fmt"
+	"crypto/rand"
 	"crypt/aes256gcm"
 	"crypt/chacha20poly1305"
 )
@@ -9,7 +11,15 @@ import (
 func Encrypt(symmCryptFunc string, key, data []byte) ([]byte, error) {
 	switch symmCryptFunc {
 	case "aes256gcm":
-		encrypted, err := aes256gcm.Encrypt(key, data)
+		aesGCM, err := aes256gcm.GenTestAEAD(key)
+		if err != nil {
+			return nil, err
+		}
+		nonce := make([]byte, aesGCM.NonceSize())
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			return nil, err
+		}
+		encrypted, err := aes256gcm.Encrypt(key, data, nonce)
 		if err != nil {
 			return nil, err
 		}
