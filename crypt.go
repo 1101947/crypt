@@ -6,10 +6,11 @@ import (
 	"fmt"
 	//"bufio"
 	//"strings"
-	"encoding/json"
+//	"encoding/json"
 	"crypto/rand"
-	"crypt/encrypted"
-	"crypt/argon2id"
+//	"crypt/encrypted"
+//	"crypt/argon2id"
+	"crypt/format"
 
 	"golang.org/x/term"
 	//"github.com/1101947/cliargumentrouter/cmdrouter"
@@ -88,25 +89,6 @@ func (E EncryptHandler) Process(posargs []string) error {
 	defer outputWR.Close()
 	E.cryptData.output = outputWR 
 
-	
-	//fmt.Println("Encrypt: ")
-	//fmt.Printf("Enter source path: ")
-	//reader := bufio.NewReader(os.Stdin)
-	//sp, _ := reader.ReadString('\n')
-	//sp = strings.TrimSpace(sp)
-	//fmt.Printf("Enter destination path: ")
-	//dp, _ := reader.ReadString('\n')
-	//dp = strings.TrimSpace(dp)
-	//c := cryptData{
-	//	sourcePath: sp,
-	//	destPath: dp,
-	//	symmCryptFuncToUse: "aes256gcm", 
-	//	slen: 16, 
-	//	iter: 1, 
-	//	mem: 64*1024,
-	//	klen: 32, 
-	//	paral: 4, 
-	//}
 	err = E.cryptData.Encrypt()
 
 	//err := c.Decrypt()
@@ -161,27 +143,14 @@ func (D DecryptHandler) Process(posargs []string) error {
 	D.cryptData.output = outputWR 
 
 
-	//fmt.Println("Encrypt: ")
-	//fmt.Printf("Enter source path: ")
-	//reader := bufio.NewReader(os.Stdin)
-	//sp, _ := reader.ReadString('\n')
-	//sp = strings.TrimSpace(sp)
-	//fmt.Printf("Enter destination path: ")
-	//dp, _ := reader.ReadString('\n')
-	//dp = strings.TrimSpace(dp)
-	//c := cryptData{
-	//	sourcePath: sp,
-	//	destPath: dp,
-	//	symmCryptFuncToUse: "aes256gcm", 
-	//	slen: 16, 
-	//	iter: 1, 
-	//	mem: 64*1024,
-	//	klen: 32, 
-	//	paral: 4, 
-	//}
-	//err := c.Encrypt()
-	err = D.cryptData.Decrypt()
-	return err
+	key, err  := GetKey()
+	if err != nil {
+		return fmt.Errorf("Geting key from user, got: %w", err)
+	}
+
+	header := format.GetNewHeader()
+	header.Decrypt(input, output, key)
+	return nil
 }
 
 
@@ -219,47 +188,25 @@ func (c cryptData) Encrypt() error {
 	if c.output == nil {
 		return fmt.Errorf("Input is not set")
 	}
-	data, err := io.ReadAll(c.input)
-	if err != nil {
-		return fmt.Errorf("Trying to read file, got: %w", err)
-	}
-	salt, err := GenSalt(int(c.slen))
-	if err != nil {
-		return err
-	}
-	header := encrypted.Header{
-		Version: "",
-		SymmCryptFunc: c.symmCryptFuncToUse,
-		Kdf: argon2id.Params{
-			Salt: salt,
-			Header: argon2id.Header{
-				Version: 0,
-				SaltLength: c.slen,
-				Iterations: c.iter,
-				Memory: c.mem,
-				Parallelism: c.paral,
-				KeyLength: c.klen,
-			},
-		},
-	}
+//	data, err := io.ReadAll(c.input)
+//	if err != nil {
+//		return fmt.Errorf("Trying to read file, got: %w", err)
+//	}
+
+//	salt, err := GenSalt(int(c.slen))
+//	if err != nil {
+//		return err
+//	}
 	key, err  := GetKey()
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
 	}
-	body, err := header.Encrypt(key, data)
+
+	header := format.Header{}
+	err := header.Encrypt(input, output, key)
 	if err != nil {
 		return err
 	}
-	model := encrypted.Encrypted{
-		Header: header,
-		Body: body,
-	}
-	encrptd, err := json.Marshal(&model)
-	if err != nil {
-		return err
-	}
-	c.output.Write(encrptd)
-	//os.WriteFile(c.destPath, encrptd, 0644)
 	return nil
 }
 
@@ -279,35 +226,4 @@ func GetKey() ([]byte, error) {
 		return nil, err
 	}
 	return []byte(s), nil
-}
-
-func (c cryptData) Decrypt() error {
-	if c.input == nil {
-		return fmt.Errorf("Input is not set")
-	}
-	if c.output == nil {
-		return fmt.Errorf("Input is not set")
-	}
-
-	//jsonData, err := os.ReadFile(c.sourcePath)
-	jsonData, err := io.ReadAll(c.input)
-	if err != nil {
-		return fmt.Errorf("Trying to read file, got: %w", err)
-	}
-	var model encrypted.Encrypted
-	err = json.Unmarshal(jsonData, &model)
-	if err != nil {
-		return fmt.Errorf("Trying to unmarshall json, got: %w", err)
-	}
-	key, err  := GetKey()
-	if err != nil {
-		return fmt.Errorf("Geting key from user, got: %w", err)
-	}
-	decrypted, err := (model.Header).Decrypt(key, model.Body)
-	if err != nil {
-		return fmt.Errorf("Encrypting got: %w", err)
-	}
-	//os.WriteFile(c.destPath, decrypted, 0644)
-	c.output.Write(decrypted)
-	return nil
 }

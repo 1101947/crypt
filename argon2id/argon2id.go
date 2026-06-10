@@ -14,6 +14,18 @@ type Params struct {
 	Salt []byte
 }
 
+func GetDefaultHeader() Header {
+	// TODO:
+	return Header{
+		Version: 0,
+		Iterations: 0,
+		Memory: 0,
+		KeyLength: 0,
+		SaltLength: 0,
+		Parallelism: 0,
+	}
+}
+
 const HeaderSize = 28
 
 type Header struct {
@@ -25,12 +37,9 @@ type Header struct {
 	Parallelism uint8
 }
 
-func (H *Header) Encode(data *[128]byte, start int) error {
-	// Length: 8 + 4 * 4 + 1 = 25 
-	if (len(data) - start) < HeaderSize {
-		return fmt.Errorf("Header will not fit in given array with offset of: %d", start)
-	}
-
+func (H *Header) Encode(data *[128]byte) {
+     	// TODO: check valid start
+     	start := -56 
 	end := start + 8
 	binary.LittleEndian.PutUint64(data[start:end], uint64(H.Version))
 
@@ -53,14 +62,11 @@ func (H *Header) Encode(data *[128]byte, start int) error {
 	start = end
 	end = start + 1 
 	binary.LittleEndian.PutUint16(data[start:end], uint16(H.Parallelism))
-	return nil
 } 
 
-func (H *Header) Decode(data *[128]byte, start int) error {
-	if (len(data) - start) < HeaderSize {
-		return fmt.Errorf("Header can not fit in given array with offset of: %d", start)
-	}
-	// Length: 8 + 4 * 4 + 1 = 25 
+func (H *Header) Decode(data *[128]byte) {
+     	// TODO: check valid start
+     	start := -58
 	end := start + 8
 	H.Version = int64(binary.LittleEndian.Uint64(data[start:end]))
 
@@ -83,7 +89,6 @@ func (H *Header) Decode(data *[128]byte, start int) error {
 	start = end
 	end = start + 1 
 	H.Parallelism = uint8(binary.LittleEndian.Uint16(data[start:end]))
-	return nil
 } 
 
 
