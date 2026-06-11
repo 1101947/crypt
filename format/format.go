@@ -7,6 +7,7 @@ import (
        "encoding/binary"
 
        "crypt/argon2id"
+       "crypt/aes256gcm"
 )
 
 // Steam for streaming - each chunk have length field.
@@ -181,23 +182,20 @@ func (F *FileHeader) Decode(data *[128]byte) {
 //
 //}
 
-
-type Crypt strcut {
+type Crypt struct {
      F FileHeader
      Src io.Reader
      Key []byte
+     Salt []byte
+     NonceSource []byte
 }
 
-func (F FileHeader) Encrypt(src io.Reader, dstFile string, key []byte ) error {
-	f, err := os.Create(dstFile)
-	if err != nil {
-		return fmt.Errorf("Creating file, got: %w", err)
-	}
-	defer f.Close()
 
+func (C Crypt) Encrypt(dstFile *os.File) error {
 	var header [128]byte
-	(&F).Encode(&header)
-	n, err := f.Write(header[:])
+	// F 
+	(&(C.F)).Encode(&header)
+	n, err := dstFile.Write(header[:])
 	if err != nil {
 		return err
 	}
@@ -205,18 +203,20 @@ func (F FileHeader) Encrypt(src io.Reader, dstFile string, key []byte ) error {
 		return fmt.Errorf("Number of writen bytes and length of header doesnt match.")
 	}
 
-	F.EncryptBody(input, key)
+	// F 
+	(C.F).EncryptBody()
 
-	n, err := f.Seek(0, io.SeekStart)
+	r, err := dstFile.Seek(0, io.SeekStart)
 	if err != nil {
 		return err
 	}
-	if n != 0 {
-		return fmt.Errorf("Expected offset to be zero, but got: %d", n)
+	if r != 0 {
+		return fmt.Errorf("Expected offset to be zero, but got: %d", r)
 	}
 
-	(*F).Encode(*header)
-	n, err := f.Write(header[:])
+	// F 
+	(&(C.F)).Encode(&header)
+	n, err = dstFile.Write(header[:])
 	if err != nil {
 		return err
 	}
@@ -226,72 +226,61 @@ func (F FileHeader) Encrypt(src io.Reader, dstFile string, key []byte ) error {
 	return nil
 }
 
-func (F FileHeader) Decrypt(src io.Reader, dst io.Writer, key []byte) error {
+func (C Crypt) Decrypt(dst io.Writer) error {
 	var header [HeaderSize]byte
-	bytesReaden, err := io.ReadAtLeast(src, header[:], len(header)) 
+	bytesReaden, err := io.ReadAtLeast(C.Src, header[:], len(header)) 
 	if err != nil {
 		return err
 	}
 	if bytesReaden != HeaderSize {
-		return fmt.Error("Should have read %d header bytes, but have read %d bytes", len(header), bytesReader)
+		return fmt.Errorf("Should have read %d header bytes, but have read %d bytes", len(header), bytesReaden)
 	}
 
-	(*F.FileHeader).Decode(*header)
-	if len(nonce) != F.NonceSourceLen {
-		return fmt.Errorf("Invalid nonce source length %d, shoud be %d .", len(nonce), F.NonceSourceLen)
-	}
-	nonceSource := make([]byte, F.NonceSourceLen)
-	bytesReaden, err := io.ReadAtLeast(src, nonceSource, F.NonceSourceLen) 
+	(&(C.F)).Decode(&header)
+//	if len(nonce) != (C.F).NonceSourceLen {
+//		return fmt.Errorf("Invalid nonce source length %d, shoud be %d .", len(nonce), (C.F).NonceSourceLen)
+//	}
+	nonceSource := make([]byte, (C.F).NonceSourceLen)
+	bytesReaden, err = io.ReadAtLeast(C.Src, nonceSource, int((C.F).NonceSourceLen)) 
 	if err != nil {
 		return err
 	}
-	if bytesReaden != F.NonceSourceLen {
-		return fmt.Error("Should have read %d nonce source bytes, but have read %d bytes", F.NonceSourceLen, bytesReader)
+	if bytesReaden != int((C.F).NonceSourceLen) {
+		return fmt.Errorf("Should have read %d nonce source bytes, but have read %d bytes", (C.F).NonceSourceLen, bytesReaden)
 	}
-
-
-	if len(salt) != F.ArgonParams.SaltLength {
-		return fmt.Errorf("Invalid salt length %d, shoud be %d .", len(salt), F.ArgonParams.SaltLength)
+	salt := make([]byte, (C.F).ArgonParams.SaltLength)
+	if len(salt) != int((C.F).ArgonParams.SaltLength) {
+		return fmt.Errorf("Invalid salt length %d, shoud be %d .", len(salt), (C.F).ArgonParams.SaltLength)
 	}
-	salt := make([]byte, F.ArgonParams.SaltLength)
-	bytesReaden, err := io.ReadAtLeast(src, salt, F.ArgonParams.SaltLength) 
+	bytesReaden, err = io.ReadAtLeast(C.Src, salt, int((C.F).ArgonParams.SaltLength))
 	if err != nil {
 		return err
 	}
-	if bytesReaden != F.ArgonParams.SaltLength {
-		return fmt.Error("Should have read %d salt bytes, but have read %d bytes", F.ArgonParams.SaltLength, bytesReader)
+	if bytesReaden != (C.F).ArgonParams.SaltLength {
+		return fmt.Errorf("Should have read %d salt bytes, but have read %d bytes", (C.F).ArgonParams.SaltLength, bytesReaden)
 	}
 	
 
-	F.DecryptBody(src, dst, key)
+	(C.F).DecryptBody()
 
 	return nil
 }
 
 
-func (F FileHeader) EncryptBody(src io.Reader, dst *os.File, key, salt, nonceSource []byte) {
-	n, err := dst.Write(salt)
+func (C Crypt) EncryptBody(dst *os.File) error {
+     	err := writeBytes(C.Salt, dst)
 	if err != nil {
-		return fmt.Errorf("Writing salt, got: %w", err)
-	}
-	if n != len(salt) {
-		return fmt.Errorf("Wrote lesser than salt length.")
+	   return fmt.Errorf("Writing salt, got %w", err)
 	}
 	//if len(salt) != F.ArgonParams.SaltLength {}
 
-	n, err := dst.Write(nonceSource)
-	if err != nil {
-		return fmt.Errorf("Writing nonce source, got: %w", err)
-	}
-	if n != len(nonceSource) {
-		return fmt.Errorf("Wrote lesser than nonce source length.")
-	}
+	err := writeBytes(C.NonceSource, dst)
 	//if len(salt) != F.NonceSourceLen {}
 
-	if F.EncryptionFunction == "aes256gcm" {
+	if string(C.F.EncryptionFunction[:]) == "aes256gcm" {
 		// TODO: check if boundaries is ok 
-		overhead := aes256gcm.GetOverhead(key, plainData)
-		plainDataChunkSize := F.ChunkSize - overhead
+		overhead := aes256gcm.GetOverhead(C.Key, plainData)
+		plainDataChunkSize := C.F.ChunkSize - overhead
 		// TODO: add check if plainDataCunkSize is positive
 		dataBuff := make([]byte, plainDataChunkSize)
 		chunkPosition := 0
@@ -299,8 +288,8 @@ func (F FileHeader) EncryptBody(src io.Reader, dst *os.File, key, salt, nonceSou
 		for {
 			nRead, err := src.Read(dataBuff)
 			if err == io.EOF {
-				F.ChunksAmount = chunkPosition
-				F.LastChunkSize = lastChunkSize
+				F.ChunksAmount = uint16(chunkPosition)
+				F.LastChunkSize = uint16(lastChunkSize)
 				return nil
 			}
 			if err != nil {
@@ -333,9 +322,19 @@ func (F FileHeader) EncryptBody(src io.Reader, dst *os.File, key, salt, nonceSou
 	return fmt.Errorf("Unknown symmetric encryption function :%s", F.EncryptionFunction)
 }
 
+func writeBytes(bytes []byte, f *os.File) error {
+	n, err := dst.Write(bytes)
+	if err != nil {
+		return fmt.Errorf("Writing bytes to file, got: %w", err)
+	}
+	if n != len(bytes) {
+		return fmt.Errorf("Wrote lesser than bytes length.")
+	}
+	return nil
+}
 
 
-func (F FileHeader) DecryptBody(src io.Reader, dst io.Writer, key, salt, nonceSource []byte) {
+func (F FileHeader) DecryptBody(src io.Reader, dst io.Writer, key, salt, nonceSource []byte) error {
 
 	if F.EncryptionFunction == "aes256gcm" {
 		// TODO: check if boundaries is ok 
@@ -383,5 +382,4 @@ func (F FileHeader) DecryptBody(src io.Reader, dst io.Writer, key, salt, nonceSo
 	}
 	return fmt.Errorf("Unknown symmetric encryption function :%s", F.EncryptionFunction)
 }
-
 
