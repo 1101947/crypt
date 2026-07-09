@@ -100,6 +100,7 @@ Decrypt parallel access -> parallel/random
 ## TODO:
 - read and encrypt large streams of byte by chuncks, with io.Reader([]byte) instead of io.ReadAll([]byte)
 - store hmac/aead in header to verify it and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
+- add size check(check for number of numbers that chunkPosition can hold, safe amount of data you can encrypt with different nonces and same key for aes256gcm and chacha20poly1305)
 
 ## Consider:
 - adding  Steam format for streaming - each chunk have length field.
@@ -116,3 +117,5 @@ Header consists of fields:
 1) Nonce source size - size of Nonce source array
 2) Nonce source - a random array of bytes from which chunk nonce will be derived(chunk nonce = Nonce source XOR chunk position)
 3) Encryption function - 
+
+

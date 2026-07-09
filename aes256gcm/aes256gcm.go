@@ -35,6 +35,7 @@ func Encrypt(key, nonce, data []byte) ([]byte, error) {
 }
 
 // key must be 32bytes
+// nonce at least 12bytes
 func EncryptPtr(key, nonce, plainData, cipherData []byte) error {
 	block, err := aes.NewCipher(key)
 	if err != nil {
