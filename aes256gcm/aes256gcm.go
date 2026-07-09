@@ -34,10 +34,8 @@ func Encrypt(key, nonce, data []byte) ([]byte, error) {
 	return sealed, nil
 }
 
+// key must be 32bytes
 func EncryptPtr(key, nonce, plainData, cipherData []byte) error {
-	if len(key) != 32 {
-		return fmt.Errorf("Key length is not 32 bytes")
-	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return err
@@ -46,9 +44,11 @@ func EncryptPtr(key, nonce, plainData, cipherData []byte) error {
 	if err != nil {
 		return err
 	}
+	// only for the first and last one
 	if len(nonce) != aesGCM.NonceSize() {
 		return fmt.Errorf("Invalid Nonce size, should be: %d , got: %d", aesGCM.NonceSize(), len(nonce))
 	}
+	// only for the first and last one
 	if len(cipherData) < len(plainData) + aesGCM.Overhead() {
 		return fmt.Errorf("Cipherdata buffer is too short. Must be at least %d bytes , but got: %d bytes", (len(plainData) + aesGCM.Overhead()), len(cipherData))
 	}

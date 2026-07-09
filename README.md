@@ -61,7 +61,6 @@ Formats:
     ChunksAmount uint16,
     LastChunkSize uint16,
     ArgonParams argon2id.Header,
-
     }, 
   Body: {
      encrypted
