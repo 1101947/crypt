@@ -59,7 +59,7 @@ func (R Router) findHandler(posargs []string) (cmdrouter.Handler, int, error) {
 			return h, i, nil
 		}
 	}
-	return nil, 0, fmt.Errorf("Handler not found")
+	return nil, 0, fmt.Errorf("Handler for command \"%v\"  not found", posargs)
 }
 
 func VersionCMD(posargs []string) error {
