@@ -68,7 +68,8 @@ func VersionCMD(posargs []string) error {
 }
 
 func GetHelpMsg() string {
-	helpMsg := "Help!"
+	// TODO: change this help message to something usefull.
+	helpMsg := "UNDER CONSTRUCTION. This help message needs changing."
 	return helpMsg 
 }
 
