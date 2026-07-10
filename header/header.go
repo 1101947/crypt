@@ -43,6 +43,46 @@ type FileHeader struct {
 	LastChunkSize uint16
 	ArgonParams argon2id.Header
 }
+
+func Compare(h1, h2 FileHeader) string {
+	s := ""
+	h1Magic := string(h1.Magic[:])
+	h2Magic := string(h2.Magic[:])
+	if h1Magic != h2Magic {
+		s += " Magic "
+	}
+	if h1.Version != h2.Version {
+		s += "Version "
+	} 
+	if h1.IsValid != h2.IsValid {
+		s += "IsValid "
+	}
+	if h1.IsLittleEndian != h2.IsLittleEndian {
+		s += "IsLittleEndian "
+	}
+	h1Encfunc := string(h1.EncryptionFunction[:])
+	h2Encfunc := string(h2.EncryptionFunction[:])
+	if h1Encfunc != h2Encfunc {
+		s += " EncryptionFunction "
+	}
+	if h1.NonceSourceLen != h2.NonceSourceLen {
+		s += "NonceSourceLen "
+	}
+	if h1.ChunkSize != h2.ChunkSize  {
+		s += "ChunkSize "
+	}
+	if h1.ChunksAmount != h2.ChunksAmount  {
+		s += "ChunksAmount "
+	}
+	if h1.LastChunkSize != h2.LastChunkSize  {
+		s += "LastChunkSize "
+	}
+	argonCmpString := argon2id.Compare(h1.ArgonParams, h2.ArgonParams)
+	if argonCmpString != "" {
+		s = s + " Argon2id Start : " + argonCmpString + " :Argon2id End "
+	}
+	return s
+}
 //
 //
 //func (F FileHeader) Verify() error {

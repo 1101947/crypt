@@ -37,6 +37,30 @@ type Header struct {
 	Parallelism uint8
 }
 
+func Compare(h1, h2 Header) string {
+	s := ""
+	if h1.Version != h2.Version {
+		s += " Version "
+	}
+	if h1.Iterations != h2.Iterations {
+		s += " Iterations " 
+	}
+	if h1.Memory != h2.Memory  {
+		s += " Memory " 
+	}
+	if h1.KeyLength != h2.KeyLength  {
+		s += " KeyLength " 
+	}
+	if h1.SaltLength != h2.SaltLength  {
+		s += " SaltLength " 
+	}
+
+	if h1.Parallelism != h2.Parallelism  {
+		s += " Parallelism " 
+	}
+	return s
+}
+
 func (H *Header) Encode(data *[128]byte) {
      	// TODO: check valid start
      	start := -56 

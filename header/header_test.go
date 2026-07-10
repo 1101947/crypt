@@ -10,8 +10,8 @@ func TestFileHeader(t *testing.T) {
 	testHeader.Encode(&buff)
 	newTestHeader := FileHeader{}
 	newTestHeader.Decode(&buff)
-	result := isEqual(testHeader, newTestHeader)
-	if result != true {
-		t.Errorf("Expected headers to be equal , but they are not.")
+	cmpString := Compare(testHeader, newTestHeader)
+	if cmpString != "" {
+		t.Errorf("Expected headers to be equal , but they are not. : %s", cmpString)
 	}
 }
