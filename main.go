@@ -44,7 +44,7 @@ func main() {
 	}
 	err = router.Process(args)
 	if err != nil {
-		log.Fatal("ERROR: ", err, "\n", GetHelpMsg())
+		log.Fatal("ERROR: ", err)
 	}
 	os.Exit(0)
 }
