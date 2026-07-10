@@ -63,7 +63,8 @@ func Compare(h1, h2 Header) string {
 
 func (H *Header) Encode(data *[128]byte) {
      	// TODO: check valid start
-     	start := -56 
+     	//start := 37
+     	start := 56 
 	end := start + 8
 	binary.LittleEndian.PutUint64(data[start:end], uint64(H.Version))
 
@@ -84,13 +85,14 @@ func (H *Header) Encode(data *[128]byte) {
 	binary.LittleEndian.PutUint32(data[start:end], H.SaltLength)
 
 	start = end
-	end = start + 1 
+	end = start + 2 
 	binary.LittleEndian.PutUint16(data[start:end], uint16(H.Parallelism))
 } 
 
 func (H *Header) Decode(data *[128]byte) {
      	// TODO: check valid start
-     	start := -58
+	// start := 58
+     	start := 56
 	end := start + 8
 	H.Version = int64(binary.LittleEndian.Uint64(data[start:end]))
 
@@ -111,7 +113,7 @@ func (H *Header) Decode(data *[128]byte) {
 	H.SaltLength = binary.LittleEndian.Uint32(data[start:end])
 
 	start = end
-	end = start + 1 
+	end = start + 2 
 	H.Parallelism = uint8(binary.LittleEndian.Uint16(data[start:end]))
 } 
 

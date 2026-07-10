@@ -16,18 +16,21 @@ const HeaderSize int = 128
 
 func GetDefaultHeader() FileHeader {
 	argonHeader := argon2id.GetDefaultHeader()
-	return FileHeader{
+	header := FileHeader{
 		Magic: [4]byte([]byte(Magic)),
 		Version: int64(Version),
 		IsValid: false, 
 		IsLittleEndian: true,
-		EncryptionFunction: [16]byte([]byte("aes256gcm")),
+		EncryptionFunction: [16]byte{},
 		NonceSourceLen: 0, // TODO  
 		ChunkSize: 0, // TODO 
 		ChunksAmount: 0, // TODO 
 		LastChunkSize: 0, // TODO 
 		ArgonParams: argonHeader,
 	}
+	encfunc := "aes256gcm"
+	_ = copy(header.EncryptionFunction[:], encfunc) 
+	return header
 }
 //
 //
@@ -125,7 +128,7 @@ func (F *FileHeader) Encode(data *[128]byte) {
 	_ = copy(data[start:end], F.EncryptionFunction[:]) 
 
 	start = end
-	end = start + 1
+	end = start + 2 
 	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
 
 	start = end
@@ -164,7 +167,7 @@ func (F *FileHeader) Decode(data *[128]byte) {
 	_ = copy( F.EncryptionFunction[:], data[start:end]) 
 
 	start = end
-	end = start + 1
+	end = start + 2 
 	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
 
 	start = end
