@@ -168,19 +168,19 @@ func (F *FileHeader) Decode(data *[128]byte) {
 
 	start = end
 	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
+	F.NonceSourceLen = binary.LittleEndian.Uint16(data[start:end])
 
 	start = end
 	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunkSize))
+	F.ChunkSize = binary.LittleEndian.Uint16(data[start:end])
 
 	start = end
 	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunksAmount))
+	F.ChunksAmount = binary.LittleEndian.Uint16(data[start:end])
 
 	start = end
 	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.LastChunkSize))
+	F.LastChunkSize = binary.LittleEndian.Uint16(data[start:end])
 
 	start = end
 	end = start + 2 
