@@ -22,16 +22,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//encryptHandler := NewEncryptHandler()
-	//err = router.Handle([]string{"encrypt"}, encryptHandler)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//decryptHandler := NewDecryptHandler()
-	//err = router.Handle([]string{"decrypt"}, decryptHandler)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	encryptHandler := NewEncryptHandler()
+	err = router.Handle([]string{"encrypt"}, encryptHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
+	decryptHandler := NewDecryptHandler()
+	err = router.Handle([]string{"decrypt"}, decryptHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
 	args := []string{}
 	if isBuilt == "true" {
 		if len(args) == 1 {
