@@ -1,48 +1,48 @@
-package format
+package header
+
+import (
+       //"io"
+       //"os"
+       //"fmt"
+       "encoding/binary"
+
+       "crypt/argon2id"
+       //"crypt/aes256gcm"
+)
+
+const Magic = "CRPT" 
+const Version = 0
+const HeaderSize int = 128
+
+func GetDefaultHeader() FileHeader {
+	argonHeader := argon2id.GetDefaultHeader()
+	return FileHeader{
+		Magic: [4]byte([]byte(Magic)),
+		Version: int64(Version),
+		IsValid: false, 
+		IsLittleEndian: true,
+		EncryptionFunction: [16]byte([]byte("aes256gcm")),
+		NonceSourceLen: 0, // TODO  
+		ChunkSize: 0, // TODO 
+		ChunksAmount: 0, // TODO 
+		LastChunkSize: 0, // TODO 
+		ArgonParams: argonHeader,
+	}
+}
 //
-//import (
-//       "io"
-//       "os"
-//       "fmt"
-//       "encoding/binary"
 //
-//       "crypt/argon2id"
-//       "crypt/aes256gcm"
-//)
-//
-//const Magic = "CRPT" 
-//const Version = 0
-//const HeaderSize int = 128
-//
-//func GetDefaultHeader() FileHeader {
-//	argonHeader := argon2id.GetDefaultHeader()
-//	return FileHeader{
-//		Magic: [4]byte([]byte(Magic)),
-//		Version: int64(Version),
-//		IsValid: false, 
-//		IsLittleEndian: true,
-//		EncryptionFunction: [16]byte([]byte("aes256gcm")),
-//		NonceSourceLen: 0, // TODO  
-//		ChunkSize: 0, // TODO 
-//		ChunksAmount: 0, // TODO 
-//		LastChunkSize: 0, // TODO 
-//		ArgonParams: argonHeader,
-//	}
-//}
-//
-//
-//type FileHeader struct {
-//	Magic [4]byte // CRPT
-//	Version int64 // version as a Timestamp 
-//	IsValid bool
-//	IsLittleEndian bool
-//	EncryptionFunction [16]byte 
-//	NonceSourceLen uint16
-//	ChunkSize uint16
-//	ChunksAmount uint16
-//	LastChunkSize uint16
-//	ArgonParams argon2id.Header
-//}
+type FileHeader struct {
+	Magic [4]byte // CRPT
+	Version int64 // version as a Timestamp 
+	IsValid bool
+	IsLittleEndian bool
+	EncryptionFunction [16]byte 
+	NonceSourceLen uint16
+	ChunkSize uint16
+	ChunksAmount uint16
+	LastChunkSize uint16
+	ArgonParams argon2id.Header
+}
 //
 //
 //func (F FileHeader) Verify() error {
@@ -55,94 +55,94 @@ package format
 //	return nil
 //}
 //
-//const (
-//	FlagIsValid = 1 << 0 // 1
-//	FlagIsLittleEndian = 1 << 1 //2
+const (
+	FlagIsValid = 1 << 0 // 1
+	FlagIsLittleEndian = 1 << 1 //2
+
+)
 //
-//)
-//
-//func (F *FileHeader) Encode(data *[128]byte) {
-//	start := 0
-//	end := start + len(F.Magic) 
-//	_ = copy(data[start:end], F.Magic[:])
-//
-//	start = end
-//	end = start + 8 
-//	binary.LittleEndian.PutUint64(data[start:end], uint64(F.Version))
-//
-//	start = end
-//	end = start + 1
-//	data[start] = 0
-//	if F.IsValid {
-//		data[start] |= FlagIsValid
-//	} 
-//	if F.IsLittleEndian {
-//		data[start] |= FlagIsLittleEndian
-//	}
-//	
-//	start = end
-//	end = start + len(F.EncryptionFunction) 
-//	_ = copy(data[start:end], F.EncryptionFunction[:]) 
-//
-//	start = end
-//	end = start + 1
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
-//
-//	start = end
-//	end = start + 2 
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunkSize))
-//
-//	start = end
-//	end = start + 2 
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunksAmount))
-//
-//	start = end
-//	end = start + 2 
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.LastChunkSize))
-//
-//	start = end
-//	end = start + 34 
-//	F.ArgonParams.Encode(data)
-//}
-//
-//func (F *FileHeader) Decode(data *[128]byte) {
-//	start := 0
-//	end := start + len(F.Magic) 
-//	_ = copy(F.Magic[:], data[start:end])
-//
-//	start = end
-//	end = start + 8 
-//	F.Version = int64(binary.LittleEndian.Uint64(data[start:end]))
-//
-//	start = end
-//	end = start + 1
-//	F.IsValid = (data[start] & FlagIsValid) != 0
-//	F.IsLittleEndian = (data[start] & FlagIsLittleEndian) != 0
-//
-//	start = end
-//	end = start + len(F.EncryptionFunction) 
-//	_ = copy( F.EncryptionFunction[:], data[start:end]) 
-//
-//	start = end
-//	end = start + 1
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
-//
-//	start = end
-//	end = start + 2 
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunkSize))
-//
-//	start = end
-//	end = start + 2 
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunksAmount))
-//
-//	start = end
-//	end = start + 2 
-//	binary.LittleEndian.PutUint16(data[start:end], uint16(F.LastChunkSize))
-//
-//	start = end
-//	end = start + 2 
-//	(F.ArgonParams).Decode(data)
-//}
+func (F *FileHeader) Encode(data *[128]byte) {
+	start := 0
+	end := start + len(F.Magic) 
+	_ = copy(data[start:end], F.Magic[:])
+
+	start = end
+	end = start + 8 
+	binary.LittleEndian.PutUint64(data[start:end], uint64(F.Version))
+
+	start = end
+	end = start + 1
+	data[start] = 0
+	if F.IsValid {
+		data[start] |= FlagIsValid
+	} 
+	if F.IsLittleEndian {
+		data[start] |= FlagIsLittleEndian
+	}
+	
+	start = end
+	end = start + len(F.EncryptionFunction) 
+	_ = copy(data[start:end], F.EncryptionFunction[:]) 
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
+
+	start = end
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunkSize))
+
+	start = end
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunksAmount))
+
+	start = end
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.LastChunkSize))
+
+	start = end
+	end = start + 34 
+	F.ArgonParams.Encode(data)
+}
+
+func (F *FileHeader) Decode(data *[128]byte) {
+	start := 0
+	end := start + len(F.Magic) 
+	_ = copy(F.Magic[:], data[start:end])
+
+	start = end
+	end = start + 8 
+	F.Version = int64(binary.LittleEndian.Uint64(data[start:end]))
+
+	start = end
+	end = start + 1
+	F.IsValid = (data[start] & FlagIsValid) != 0
+	F.IsLittleEndian = (data[start] & FlagIsLittleEndian) != 0
+
+	start = end
+	end = start + len(F.EncryptionFunction) 
+	_ = copy( F.EncryptionFunction[:], data[start:end]) 
+
+	start = end
+	end = start + 1
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
+
+	start = end
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunkSize))
+
+	start = end
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunksAmount))
+
+	start = end
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.LastChunkSize))
+
+	start = end
+	end = start + 2 
+	(F.ArgonParams).Decode(data)
+}
 ////
 ////func (F *FileHeader) Read(file *os.File) error {
 ////
