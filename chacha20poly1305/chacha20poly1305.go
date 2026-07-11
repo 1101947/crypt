@@ -10,21 +10,13 @@ import (
 )
 
 
-func Encrypt(key []byte, data []byte) ([]byte, error) {
-	aead, err := chacha20poly1305.NewX(key)
-	if err != nil {
-		return nil, err
-	}
-	var encrypted []byte
-	nonce := make([]byte, aead.NonceSize(), aead.NonceSize()+len(data)+aead.Overhead())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, err
-	}
-	encrypted = aead.Seal(nonce, nonce, data, nil)
-	return encrypted, nil
+type ChaCha20Poly1305 bool
+
+func GetChaCha20Poly1305() ChaCha20Poly1305 {
+	return ChaCha20Poly1305(true)
 }
 
-func EncryptPtr(key, nonce, plainData, cipherData []byte) error {
+func (C ChaCha20Poly1305) Encrypt(key, nonce, plainData, cipherData []byte) error {
 // Consider: should i add check for key length or chacha20poly1305.NewX() already does that ? 
 //	if len(key) != chacha20poly1305.KeySize {
 //		return fmt.Errorf("Key length is not %d", chacha20poly1305.KeySize)
@@ -44,24 +36,7 @@ func EncryptPtr(key, nonce, plainData, cipherData []byte) error {
 }
 
 
-func Decrypt(key, encrypted []byte) ([]byte, error) {
-	aead, err := chacha20poly1305.NewX(key)
-	if err != nil {
-		return nil, err
-	}
-	if len(encrypted) < aead.NonceSize() {
-		return nil, fmt.Errorf("encrypted data is too short")
-	}
-	nonce, encryptedData := encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():]
-	decrypted, err := aead.Open(nil, nonce, encryptedData, nil)
-	if err != nil {
-		return nil, err
-	}
-	return decrypted, nil
-}
-
-
-func DecryptPtr(key, nonce, cipherData, plainData []byte) error {
+func (C ChaCha20Poly1305) Decrypt(key, nonce, cipherData, plainData []byte) error {
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return err
