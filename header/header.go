@@ -46,6 +46,7 @@ type FileHeader struct {
 	ChunksAmount uint16
 	LastChunkSize uint16
 	Overhead uint16
+	// TODO: rename to ArgonHeader
 	ArgonParams argon2id.Header
 }
 

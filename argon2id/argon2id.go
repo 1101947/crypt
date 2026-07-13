@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"encoding/binary"
 
-	//"crypto/rand"
+	"crypto/rand"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -44,7 +44,7 @@ type Header struct {
 	Iterations uint32
 	Memory uint32
 	KeyLength uint32
-	SaltLength uint32
+	SaltLength uint16
 	Parallelism uint8
 }
 
@@ -92,8 +92,8 @@ func (H *Header) Encode(data *[128]byte) {
 	binary.LittleEndian.PutUint32(data[start:end], H.KeyLength)
 
 	start = end
-	end = start + 4
-	binary.LittleEndian.PutUint32(data[start:end], H.SaltLength)
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], H.SaltLength)
 
 	start = end
 	end = start + 2 
@@ -120,8 +120,8 @@ func (H *Header) Decode(data *[128]byte) {
 	H.KeyLength = binary.LittleEndian.Uint32(data[start:end])
 
 	start = end
-	end = start + 4
-	H.SaltLength = binary.LittleEndian.Uint32(data[start:end])
+	end = start + 2 
+	H.SaltLength = binary.LittleEndian.Uint16(data[start:end])
 
 	start = end
 	end = start + 2 
@@ -207,4 +207,16 @@ func (P Params) Hash(key []byte) ([]byte, error) {
 	}
 	hashKey := argon2.IDKey(key, P.Salt, P.Header.Iterations, P.Header.Memory, P.Header.Parallelism, P.Header.KeyLength)
 	return hashKey, nil
+}
+
+func GetSalt(saltLen uint16) ([]byte, error) {
+	key := make([]byte, int(saltLen))
+	i, err := rand.Read(key)
+	if err != nil {
+		return nil, fmt.Errorf("Reading random bytes, got: %w", err)
+	}
+	if i != int(saltLen) {
+		return nil, fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes , but read %d bytes.", saltLen, i)
+	}
+	return key, nil
 }

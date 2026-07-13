@@ -48,11 +48,11 @@ func TestCryptoChunkAes256Gcm(t *testing.T) {
 func TestCryptoChunkChaCha20Poly1305(t *testing.T) {
 	key := make([]byte, 32)
 	i, err := rand.Read(key)
-	if i != 32 {
-		t.Errorf("i must be equal to 32, but it is %d", i)
-	}
 	if err != nil {
 		t.Errorf("ERROR: %v : %d", err, i)
+	}
+	if i != 32 {
+		t.Errorf("i must be equal to 32, but it is %d", i)
 	}
 	nonce := make([]byte, 24)
 	i, err = rand.Read(nonce)

@@ -9,7 +9,7 @@ import (
 ////	"encoding/json"
 	"crypto/rand"
 ////	"crypt/encrypted"
-////	"crypt/argon2id"
+	"crypt/argon2id"
 	"crypt/aes256gcm"
 	"crypt/header"
 	"crypt/cryptochunk"
@@ -98,38 +98,49 @@ func (E EncryptHandler) Process(posargs []string) error {
 	//return err
 	// TODO: change this, add flag
 	// consider using newDefaultCryptoData
-	headr := header.GetDefaultHeader()
-	key, err  := GetKey()
+	//headr := header.GetDefaultHeader()
+	crpt := NewCryptData()
+	salt, err := argon2id.GetSalt(crpt.h.ArgonParams.SaltLength)
+	if err != nil {
+		return fmt.Errorf("Generating salt for argon2id function, got: %w", err)
+	}
+	argonParams := argon2id.Params{
+		Header: crpt.h.ArgonParams,
+		Salt: salt,
+
+	}
+	key, err  := GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
 	}
-	nonceSource := make([]byte, headr.NonceSourceLen)
+	nonceSource := make([]byte, crpt.h.NonceSourceLen)
 	_, err = rand.Read(nonceSource)
 	if err != nil {
 		return fmt.Errorf("Reading random bytes into nonceSource buffer, got: %w", err)
 	}
 
-	crypter := aes256gcm.GetAES256GCM()
+	//crypter := aes256gcm.GetAES256GCM()
 
-	overhead, err := crypter.GetOverhead(key)
+	//overhead, err := crypter.GetOverhead(key)
+	overhead, err := crpt.cr.Crypter.GetOverhead(key)
 	if err != nil {
 		return fmt.Errorf("Getting overhead, got: %w", err)
 	}
-	headr.Overhead = overhead 
+	crpt.h.Overhead = overhead 
 
-	plainDataChunkSize := headr.ChunkSize - overhead 
+	plainDataChunkSize := crpt.h.ChunkSize - overhead 
 	plainBuf := make([]byte, int(plainDataChunkSize))
 
 
 	c := cryptData{
-		h: headr,
+		h: crpt.h,
 		cr: cryptochunk.CryptChunk{
 			In: plainBuf,
-			Out: make([]byte, headr.ChunkSize),
+			Out: make([]byte, crpt.h.ChunkSize),
 			Key: key,
 			NonceSource: nonceSource,
 			ChunkPosition: 0,
-			Crypter: crypter,
+			Crypter: crpt.cr.Crypter,
 		},
 		in: inputRD,
 		out: outputWR,
@@ -319,9 +330,29 @@ func (c cryptData) Encrypt() error {
 
 func (c cryptData) Decrypt() error {
 	var headerBuf [128]byte 
+	readIntoHeaderBuf, err := c.in.Read(headerBuf[:])
+	if err != nil {
+		return fmt.Errorf("Reading header from file to buffer, got: %w", err)
+	}
+	if readIntoHeaderBuf != len(headerBuf) {
+		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", len(headerBuf), readIntoHeaderBuf)
+	}
 	c.h.Decode(&headerBuf)
 	// mv
-	key, err  := GetKey()
+	saltBuff := make([]byte, int(c.h.ArgonParams.SaltLength)) 
+	readIntoSaltBuff, err := c.in.Read(saltBuff)
+	if err != nil {
+		return fmt.Errorf("Reading salt from file to buffer, got: %w", err)
+	}
+	if readIntoSaltBuff != int(c.h.ArgonParams.SaltLength) {
+		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", c.h.ArgonParams.SaltLength, readIntoSaltBuff)
+	}
+
+	argonParams := argon2id.Params{
+		Header: c.h.ArgonParams,
+		Salt: saltBuff,
+	}
+	key, err  := GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
 	}
@@ -444,7 +475,7 @@ func (c cryptData) Decrypt() error {
 //	return salt, nil
 //}
 //
-func (P argon2id.Params) GetKey() ([32]byte, error) {
+func GetKey(P argon2id.Params) ([]byte, error) {
 	fmt.Println("Provide password: ")
 	s, err := term.ReadPassword(1)
 	if err != nil {
@@ -455,6 +486,9 @@ func (P argon2id.Params) GetKey() ([32]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Hashing, got: %w", err)
 	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("Invalid key length: %d", len(key))
+	}
 
-	return []byte(s), nil
+	return key, nil
 }
