@@ -8,13 +8,15 @@ import (
 type Crypter interface {
 	Encrypt(key, nonce, plainData, cipherData []byte) error
 	Decrypt(key, nonce, plainData, cipherData []byte) error
+	GetOverhead(key []byte) (uint16, error)
 }
 
 
 type CryptChunk struct {
 	In, Out, Key, NonceSource []byte
 	// TODO: what is overflow ?
-	ChunkPosition uint64
+	// TODO: consider changing type of ChunkPosition to int
+	ChunkPosition uint16
 	Crypter Crypter
 }
 
@@ -36,12 +38,12 @@ func (C CryptChunk) Decrypt() error {
 	return nil
 }
 //
-//// assumption : uint64 is 8bytes long
+//// assumption : uint16 is 2bytes long
 ////              nonce and nonce source is 12bytes long
 //// TODO: make sure this works correctly
-func GenerateNonce(source []byte, chunkNumber uint64) []byte {
+func GenerateNonce(source []byte, chunkNumber uint16) []byte {
 	buf := make([]byte, len(source))
-	binary.LittleEndian.PutUint64(buf, chunkNumber)
+	binary.LittleEndian.PutUint16(buf, chunkNumber)
 	newnonce := make([]byte, len(source))
 	for i:=0; i<12; i++ {
 		newnonce[i] = buf[i] ^ source[i]

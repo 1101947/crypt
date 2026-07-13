@@ -16,6 +16,24 @@ func GetAES256GCM() AES256GCM {
 	return AES256GCM(true)
 }
 
+func (A AES256GCM) GetOverhead(key []byte) (uint16, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		// DEBUG
+		fmt.Println("hiii 1")
+		return 0, err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return 0, err
+	}
+	overhead := aesGCM.Overhead()
+	if overhead < 0 {
+		return 0, fmt.Errorf("Invalid overhead value: negative: %d", overhead)
+	}
+	return uint16(overhead), nil
+}
+
 func (A AES256GCM) Encrypt(key, nonce, plainData, cipherData []byte) error {
 	block, err := aes.NewCipher(key)
 	if err != nil {

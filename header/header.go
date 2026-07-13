@@ -33,7 +33,7 @@ func GetDefaultHeader() FileHeader {
 	return header
 }
 //
-//
+// using uint16 as maximum capacity uint to make it trivial(is this the right word?) to convert to int on both 32bit and 64bit platforms
 type FileHeader struct {
 	Magic [4]byte // CRPT
 	Version int64 // version as a Timestamp 
@@ -42,8 +42,10 @@ type FileHeader struct {
 	EncryptionFunction [16]byte 
 	NonceSourceLen uint16
 	ChunkSize uint16
+	// TODO: change to uint64
 	ChunksAmount uint16
 	LastChunkSize uint16
+	Overhead uint16
 	ArgonParams argon2id.Header
 }
 
@@ -79,6 +81,9 @@ func Compare(h1, h2 FileHeader) string {
 	}
 	if h1.LastChunkSize != h2.LastChunkSize  {
 		s += "LastChunkSize "
+	}
+	if h1.Overhead != h2.Overhead {
+		s += " Overhead "
 	}
 	argonCmpString := argon2id.Compare(h1.ArgonParams, h2.ArgonParams)
 	if argonCmpString != "" {
@@ -144,6 +149,10 @@ func (F *FileHeader) Encode(data *[128]byte) {
 	binary.LittleEndian.PutUint16(data[start:end], uint16(F.LastChunkSize))
 
 	start = end
+	end = start + 2 
+	binary.LittleEndian.PutUint16(data[start:end], uint16(F.Overhead))
+
+	start = end
 	end = start + 34 
 	F.ArgonParams.Encode(data)
 }
@@ -181,6 +190,10 @@ func (F *FileHeader) Decode(data *[128]byte) {
 	start = end
 	end = start + 2 
 	F.LastChunkSize = binary.LittleEndian.Uint16(data[start:end])
+
+	start = end
+	end = start + 2 
+	F.Overhead = binary.LittleEndian.Uint16(data[start:end])
 
 	start = end
 	end = start + 2 

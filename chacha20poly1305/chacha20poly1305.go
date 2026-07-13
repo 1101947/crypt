@@ -14,6 +14,18 @@ func GetChaCha20Poly1305() ChaCha20Poly1305 {
 	return ChaCha20Poly1305(true)
 }
 
+func (C ChaCha20Poly1305) GetOverhead(key []byte) (uint16, error) {
+	aead, err := chacha20poly1305.NewX(key)
+	if err != nil {
+		return 0, err
+	}
+	overhead := aead.Overhead()
+	if overhead < 0 {
+		return 0, fmt.Errorf("Invalid overhead value: negative: %d", overhead)
+	}
+	return uint16(overhead), nil
+}
+
 func (C ChaCha20Poly1305) Encrypt(key, nonce, plainData, cipherData []byte) error {
 // Consider: should i add check for key length or chacha20poly1305.NewX() already does that ? 
 //	if len(key) != chacha20poly1305.KeySize {

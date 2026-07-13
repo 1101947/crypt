@@ -7,12 +7,14 @@ import (
 //	//"bufio"
 //	//"strings"
 ////	"encoding/json"
-//	"crypto/rand"
+	"crypto/rand"
 ////	"crypt/encrypted"
 ////	"crypt/argon2id"
-//	"crypt/format"
+	"crypt/aes256gcm"
+	"crypt/header"
+	"crypt/cryptochunk"
 //
-//	"golang.org/x/term"
+	"golang.org/x/term"
 //	//"github.com/1101947/cliargumentrouter/cmdrouter"
 	"github.com/1101947/cliargumentrouter/flag"
 )
@@ -70,7 +72,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		return fmt.Errorf("Trying to open file, got : %w", err)
 	}
 	defer inputRD.Close()
-	E.cryptData.input = inputRD
+	//E.cryptData.in = inputRD
 
 	outputVals, ok := kwargs["output"]
 	if !ok {
@@ -89,13 +91,51 @@ func (E EncryptHandler) Process(posargs []string) error {
 		return fmt.Errorf("Trying to create file, got : %w", err)
 	}
 	defer outputWR.Close()
-	E.cryptData.output = outputWR 
+	//E.cryptData.output = outputWR 
 
 	// TODO: uncomment later
 	//err = E.cryptData.Encrypt()
 	//return err
-	fmt.Println("Encrypting...")
-	return nil
+	// TODO: change this, add flag
+	// consider using newDefaultCryptoData
+	headr := header.GetDefaultHeader()
+	key, err  := GetKey()
+	if err != nil {
+		return fmt.Errorf("Geting key from user, got: %w", err)
+	}
+	nonceSource := make([]byte, headr.NonceSourceLen)
+	_, err = rand.Read(nonceSource)
+	if err != nil {
+		return fmt.Errorf("Reading random bytes into nonceSource buffer, got: %w", err)
+	}
+
+	crypter := aes256gcm.GetAES256GCM()
+
+	overhead, err := crypter.GetOverhead(key)
+	if err != nil {
+		return fmt.Errorf("Getting overhead, got: %w", err)
+	}
+	headr.Overhead = overhead 
+
+	plainDataChunkSize := headr.ChunkSize - overhead 
+	plainBuf := make([]byte, int(plainDataChunkSize))
+
+
+	c := cryptData{
+		h: headr,
+		cr: cryptochunk.CryptChunk{
+			In: plainBuf,
+			Out: make([]byte, headr.ChunkSize),
+			Key: key,
+			NonceSource: nonceSource,
+			ChunkPosition: 0,
+			Crypter: crypter,
+		},
+		in: inputRD,
+		out: outputWR,
+	}
+	err = c.Encrypt()
+	return err 
 
 	//err := c.Decrypt()
 }
@@ -126,7 +166,7 @@ func (D DecryptHandler) Process(posargs []string) error {
 		return fmt.Errorf("Trying to open file, got : %w", err)
 	}
 	defer inputRD.Close()
-	D.cryptData.input = inputRD
+	//D.cryptData.input = inputRD
 
 	outputVals, ok := kwargs["output"]
 	if !ok {
@@ -145,47 +185,226 @@ func (D DecryptHandler) Process(posargs []string) error {
 		return fmt.Errorf("Trying to create file, got : %w", err)
 	}
 	defer outputWR.Close()
-	D.cryptData.output = outputWR 
+	//D.cryptData.output = outputWR 
 
 
-	//key, err  := GetKey()
-	//if err != nil {
-	//	return fmt.Errorf("Geting key from user, got: %w", err)
-	//}
-
+	D.cryptData.in = inputRD
+	D.cryptData.out = outputWR
+	err = D.cryptData.Decrypt()
+	return err 
 	//header := format.GetNewHeader()
 	//header.Decrypt(input, output, key)
-	fmt.Println("Decrypting...")
-	return nil
+	//fmt.Println("Decrypting...")
 }
 //
 //
-type cryptData struct {
-	//sourcePath string
-	//destPath string
-	input io.Reader
-	output io.Writer
-	symmCryptFuncToUse string
-	slen uint32
-	iter uint32
-	mem uint32
-	klen uint32
-	paral uint8
-}
+//type cryptData struct {
+//	//sourcePath string
+//	//destPath string
+//	input io.Reader
+//	output io.Writer
+//	symmCryptFuncToUse string
+//	slen uint32
+//	iter uint32
+//	mem uint32
+//	klen uint32
+//	paral uint8
+//}
+//
+//input: nil,
+//output: nil,
+//symmCryptFuncToUse: "aes256gcm", 
+//slen: 16, 
+//iter: 1, 
+//mem: 64*1024,
+//klen: 32, 
+//paral: 4, 
 
 func NewCryptData() cryptData {
 	c := cryptData{
-		input: nil,
-		output: nil,
-		symmCryptFuncToUse: "aes256gcm", 
-		slen: 16, 
-		iter: 1, 
-		mem: 64*1024,
-		klen: 32, 
-		paral: 4, 
+		h: header.GetDefaultHeader(),
+		cr: cryptochunk.CryptChunk{},
+		in: nil, 
+		out: nil,
 	}
 	return c
 } 
+
+type cryptData struct {
+	h header.FileHeader
+	cr cryptochunk.CryptChunk
+	in, out *os.File
+}
+
+func (c cryptData) Encrypt() error {
+	var headerBuf [128]byte 
+	// c.h is header.FileHeader
+	c.h.Encode(&headerBuf)
+	headerBytesWriten, err := c.out.Write(headerBuf[:])
+	if err != nil {
+		return fmt.Errorf("Trying to write header buffer to file, got: %w", err)
+	}
+	if headerBytesWriten != len(headerBuf) {
+		return fmt.Errorf("Number of bytes writen differs from the amount of bytes in headerBuf(128)")
+	}
+	nonceBytesWriten, err := c.out.Write(c.cr.NonceSource)
+	if err != nil {
+		return fmt.Errorf("Trying to write nonce source buffer to file, got: %w", err)
+	}
+	if nonceBytesWriten != len(c.cr.NonceSource) {
+		return fmt.Errorf("Number of bytes writen: %d differs from the amount of bytes in c.cr.NonceSource: %d", nonceBytesWriten, len(c.cr.NonceSource))
+	}
+
+	// encbody
+
+	// cryptBuf and plainBuf are just cr.Out and cr.In
+	// TODO:
+	// their making should be done in handler, not here
+	var chunksAmount uint16
+	chunksAmount = uint16(0)
+	var lastChunkSize uint16
+	var readIntoPlain int
+	var writeToOut int
+	for {
+		readIntoPlain, err = c.in.Read(c.cr.In)
+		if err == io.EOF && readIntoPlain == 0 {
+			//TODO: handle
+		}
+		if err != nil {
+			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
+		}
+		if readIntoPlain <= 0 {
+			return fmt.Errorf("Have read invalid number of bytes")
+		} 
+		// cr is cryptochunk
+		chunksAmount++
+		c.cr.ChunkPosition = chunksAmount 
+		err = c.cr.Encrypt()
+		if err != nil {
+			return fmt.Errorf("Encrypting, got: %w", err)
+		}
+		writeToOut, err = c.out.Write(c.cr.Out)
+		if err != nil {
+			return fmt.Errorf("Writing to output file, got: %w", err)
+		}
+		if writeToOut != len(c.cr.Out) {
+			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+		}
+	}
+	if readIntoPlain < 0 {
+		return fmt.Errorf("Invalid number of bytes read from file: negative: %d", readIntoPlain)
+	}
+	lastChunkSize = uint16(readIntoPlain) + c.h.Overhead 
+
+	offset, err := c.out.Seek(0, io.SeekStart)
+	if err != nil {
+		return fmt.Errorf("Seeking for the start of the file to rewrite the header, got: %w", err)
+	}
+	if offset != 0 {
+		return fmt.Errorf("Expected offset to be zero, but got: %d", offset)
+	}
+	c.h.ChunksAmount = chunksAmount
+	c.h.LastChunkSize = lastChunkSize
+	c.h.IsValid = true
+	c.h.Encode(&headerBuf)
+	headerBytesWriten, err = c.out.Write(headerBuf[:])
+	if err != nil {
+		return fmt.Errorf("Trying to write header buffer to file, got: %w", err)
+	}
+	if headerBytesWriten != len(headerBuf) {
+		return fmt.Errorf("Number of bytes writen differs from the amount of bytes in headerBuf(128)")
+	}
+	return nil
+}
+
+func (c cryptData) Decrypt() error {
+	var headerBuf [128]byte 
+	c.h.Decode(&headerBuf)
+	// mv
+	key, err  := GetKey()
+	if err != nil {
+		return fmt.Errorf("Geting key from user, got: %w", err)
+	}
+	nonceSource := make([]byte, c.h.NonceSourceLen)
+	crypter := aes256gcm.GetAES256GCM()
+
+	overhead, err := crypter.GetOverhead(key)
+	if err != nil {
+		return fmt.Errorf("Getting overhead, got: %w", err)
+	}
+	headr := header.GetDefaultHeader()
+	plainDataChunkSize := headr.ChunkSize - overhead 
+	plainBuf := make([]byte, plainDataChunkSize)
+
+	// Its a little bit strange that i redefine c here, maybe redesign
+	c = cryptData{
+		h: headr,
+		cr: cryptochunk.CryptChunk{
+			In: make([]byte, headr.ChunkSize),
+			Out: plainBuf,
+			Key: key,
+			NonceSource: nonceSource,
+			ChunkPosition: 0,
+			Crypter: crypter,
+		},
+		in: c.in,
+		out: c.out,
+	}
+
+	readNonceSource, err := c.in.Read(c.cr.NonceSource)
+	if err != nil {
+		return fmt.Errorf("Reading nonce source bytes, got: %w", err)
+	}
+	// What about comparison with c.h.NonceSourceLen ?
+	if readNonceSource != len(c.cr.NonceSource) {
+		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(c.cr.NonceSource))
+	}
+	var readIntoCrypt int
+	var readIntoPlain int
+	var writeToOut int
+	var chunksPos int
+	chunksAmount := int(c.h.ChunksAmount)
+	for chunksPos=1;chunksPos<chunksAmount;chunksPos++ {
+		readIntoCrypt, err = c.in.Read(c.cr.In)
+		if err == io.EOF && readIntoPlain == 0 {
+			//TODO: handle
+		}
+		if err != nil {
+			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
+		}
+		if readIntoCrypt <= 0 {
+			return fmt.Errorf("Have read invalid number of bytes")
+		} 
+
+		c.cr.ChunkPosition = uint16(chunksPos)
+		err = c.cr.Decrypt()
+		if err != nil {
+			return fmt.Errorf("Decrypting, got: %w", err)
+		}
+		writeToOut, err = c.out.Write(c.cr.Out)
+		if err != nil {
+			return fmt.Errorf("Writing to output file, got: %w", err)
+		}
+		if writeToOut != len(c.cr.Out) {
+			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+		}
+	}
+	c.cr.ChunkPosition = c.cr.ChunkPosition + 1
+	err = c.cr.Decrypt()
+	if err != nil {
+		return fmt.Errorf("Decrypting, got: %w", err)
+	}
+	writeToOut, err = c.out.Write(c.cr.Out[:c.h.LastChunkSize])
+	if err != nil {
+		return fmt.Errorf("Writing to output file, got: %w", err)
+	}
+	if writeToOut != len(c.cr.Out) {
+		return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+	}
+	return nil
+}
+
+
 //
 //func (c cryptData) Encrypt() error {
 //	if c.input == nil {
@@ -225,11 +444,17 @@ func NewCryptData() cryptData {
 //	return salt, nil
 //}
 //
-//func GetKey() ([]byte, error) {
-//	fmt.Printf("Provide password: ")
-//	s, err := term.ReadPassword(1)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return []byte(s), nil
-//}
+func (P argon2id.Params) GetKey() ([32]byte, error) {
+	fmt.Println("Provide password: ")
+	s, err := term.ReadPassword(1)
+	if err != nil {
+		return nil, err
+	}
+	userKey := []byte(s)
+	key, err := P.Hash(userKey)
+	if err != nil {
+		return nil, fmt.Errorf("Hashing, got: %w", err)
+	}
+
+	return []byte(s), nil
+}

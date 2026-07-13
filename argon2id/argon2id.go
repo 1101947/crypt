@@ -15,16 +15,27 @@ type Params struct {
 }
 
 func GetDefaultHeader() Header {
-	// TODO:
 	return Header{
 		Version: 0,
-		Iterations: 0,
-		Memory: 0,
-		KeyLength: 0,
-		SaltLength: 0,
-		Parallelism: 0,
+		Iterations: 1,
+		Memory: 2*1024*1024,
+		KeyLength: 32,
+		SaltLength: 16,
+		Parallelism: 4,
 	}
 }
+
+func GetDefaultHeaderLessMemory() Header {
+	return Header{
+		Version: 0,
+		Iterations: 3,
+		Memory: 64*1024,
+		KeyLength: 32,
+		SaltLength: 16,
+		Parallelism: 4,
+	}
+}
+
 
 const HeaderSize = 28
 
