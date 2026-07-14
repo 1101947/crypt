@@ -99,34 +99,36 @@ func (E EncryptHandler) Process(posargs []string) error {
 	// TODO: change this, add flag
 	// consider using newDefaultCryptoData
 	//headr := header.GetDefaultHeader()
-	crpt := NewCryptData()
-	salt, err := argon2id.GetSalt(crpt.h.ArgonParams.SaltLength)
+	//crpt := NewCryptData()
+	argonHeader := argon2id.GetDefaulHeader()
+	salt, err := argon2id.GetSalt(argonHeader.SaltLength)
 	if err != nil {
 		return fmt.Errorf("Generating salt for argon2id function, got: %w", err)
 	}
 	argonParams := argon2id.Params{
-		Header: crpt.h.ArgonParams,
+		Header: argonHeader,
 		Salt: salt,
-
 	}
+	// Do get key realy need argonParams as a param ?
 	key, err  := GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
 	}
+	headr := cryptochunk.
 	nonceSource := make([]byte, crpt.h.NonceSourceLen)
 	_, err = rand.Read(nonceSource)
 	if err != nil {
 		return fmt.Errorf("Reading random bytes into nonceSource buffer, got: %w", err)
 	}
 
-	//crypter := aes256gcm.GetAES256GCM()
+	crpt.h.Overhead = overhead 
+	crypter := aes256gcm.GetAES256GCM()
 
-	//overhead, err := crypter.GetOverhead(key)
-	overhead, err := crpt.cr.Crypter.GetOverhead(key)
+	fmt.Printf("DEBUG: %+v\n", crpt)
+	overhead, err := crypter.GetOverhead(key)
 	if err != nil {
 		return fmt.Errorf("Getting overhead, got: %w", err)
 	}
-	crpt.h.Overhead = overhead 
 
 	plainDataChunkSize := crpt.h.ChunkSize - overhead 
 	plainBuf := make([]byte, int(plainDataChunkSize))
@@ -140,7 +142,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 			Key: key,
 			NonceSource: nonceSource,
 			ChunkPosition: 0,
-			Crypter: crpt.cr.Crypter,
+			Crypter: crypter,
 		},
 		in: inputRD,
 		out: outputWR,

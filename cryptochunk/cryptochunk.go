@@ -9,6 +9,7 @@ type Crypter interface {
 	Encrypt(key, nonce, plainData, cipherData []byte) error
 	Decrypt(key, nonce, plainData, cipherData []byte) error
 	GetOverhead(key []byte) (uint16, error)
+	GetNonceSize(key []byte) (uint16, error)
 }
 
 

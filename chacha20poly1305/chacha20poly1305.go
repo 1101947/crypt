@@ -26,6 +26,18 @@ func (C ChaCha20Poly1305) GetOverhead(key []byte) (uint16, error) {
 	return uint16(overhead), nil
 }
 
+func (C ChaCha20Poly1305) GetNonceSize(key []byte) (uint16, error) {
+	aead, err := chacha20poly1305.NewX(key)
+	if err != nil {
+		return 0, err
+	}
+	nonceSize := aead.Overhead()
+	if nonceSize < 0 {
+		return 0, fmt.Errorf("Invalid nonce size value: negative: %d", nonceSize)
+	}
+	return uint16(nonceSize), nil
+}
+
 func (C ChaCha20Poly1305) Encrypt(key, nonce, plainData, cipherData []byte) error {
 // Consider: should i add check for key length or chacha20poly1305.NewX() already does that ? 
 //	if len(key) != chacha20poly1305.KeySize {
