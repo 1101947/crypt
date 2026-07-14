@@ -23,7 +23,7 @@ func GetDefaultHeader() FileHeader {
 		IsLittleEndian: true,
 		EncryptionFunction: [16]byte{},
 		NonceSourceLen: 0, // TODO  
-		ChunkSize: 0, // TODO 
+		ChunkSize: 1024, // TODO 
 		ChunksAmount: 0, // TODO 
 		LastChunkSize: 0, // TODO 
 		ArgonParams: argonHeader,

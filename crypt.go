@@ -100,7 +100,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 	// consider using newDefaultCryptoData
 	//headr := header.GetDefaultHeader()
 	//crpt := NewCryptData()
-	argonHeader := argon2id.GetDefaulHeader()
+	argonHeader := argon2id.GetDefaultHeader()
 	salt, err := argon2id.GetSalt(argonHeader.SaltLength)
 	if err != nil {
 		return fmt.Errorf("Generating salt for argon2id function, got: %w", err)
@@ -114,31 +114,38 @@ func (E EncryptHandler) Process(posargs []string) error {
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
 	}
-	headr := cryptochunk.
-	nonceSource := make([]byte, crpt.h.NonceSourceLen)
+	headr := header.GetDefaultHeader()
+
+	crypter := aes256gcm.GetAES256GCM()
+
+	overhead, err := crypter.GetOverhead(key)
+	if err != nil {
+		return fmt.Errorf("Getting overhead, got: %w", err)
+	}
+	headr.Overhead = overhead 
+
+	nonceSourceLen, err := crypter.GetNonceSize(key)
+	if err != nil {
+		return fmt.Errorf("Getting nonce source size, got: %w", err)
+	}
+	headr.NonceSourceLen = nonceSourceLen
+	nonceSource := make([]byte, nonceSourceLen)
+
 	_, err = rand.Read(nonceSource)
 	if err != nil {
 		return fmt.Errorf("Reading random bytes into nonceSource buffer, got: %w", err)
 	}
 
-	crpt.h.Overhead = overhead 
-	crypter := aes256gcm.GetAES256GCM()
-
-	fmt.Printf("DEBUG: %+v\n", crpt)
-	overhead, err := crypter.GetOverhead(key)
-	if err != nil {
-		return fmt.Errorf("Getting overhead, got: %w", err)
-	}
-
-	plainDataChunkSize := crpt.h.ChunkSize - overhead 
+	// isnt chunksize zero now and needs to be set ?
+	fmt.Println(headr.ChunkSize)
+	plainDataChunkSize := headr.ChunkSize - overhead 
 	plainBuf := make([]byte, int(plainDataChunkSize))
 
-
 	c := cryptData{
-		h: crpt.h,
+		h: headr,
 		cr: cryptochunk.CryptChunk{
 			In: plainBuf,
-			Out: make([]byte, crpt.h.ChunkSize),
+			Out: make([]byte, headr.ChunkSize),
 			Key: key,
 			NonceSource: nonceSource,
 			ChunkPosition: 0,
@@ -282,6 +289,7 @@ func (c cryptData) Encrypt() error {
 		readIntoPlain, err = c.in.Read(c.cr.In)
 		if err == io.EOF && readIntoPlain == 0 {
 			//TODO: handle
+			break
 		}
 		if err != nil {
 			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
