@@ -110,6 +110,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		Salt: salt,
 	}
 	// Do get key realy need argonParams as a param ?
+	fmt.Printf("DEBUG: %+v\n", argonParams)
 	key, err  := GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
@@ -151,6 +152,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 			ChunkPosition: 0,
 			Crypter: crypter,
 		},
+		salt: salt,
 		in: inputRD,
 		out: outputWR,
 	}
@@ -253,6 +255,7 @@ func NewCryptData() cryptData {
 type cryptData struct {
 	h header.FileHeader
 	cr cryptochunk.CryptChunk
+	salt []byte
 	in, out *os.File
 }
 
@@ -260,6 +263,7 @@ func (c cryptData) Encrypt() error {
 	var headerBuf [128]byte 
 	// c.h is header.FileHeader
 	c.h.Encode(&headerBuf)
+	// Writing header
 	headerBytesWriten, err := c.out.Write(headerBuf[:])
 	if err != nil {
 		return fmt.Errorf("Trying to write header buffer to file, got: %w", err)
@@ -267,6 +271,15 @@ func (c cryptData) Encrypt() error {
 	if headerBytesWriten != len(headerBuf) {
 		return fmt.Errorf("Number of bytes writen differs from the amount of bytes in headerBuf(128)")
 	}
+	// Writing salt 
+	saltBytesWriten, err := c.out.Write(c.salt)
+	if err != nil {
+		return fmt.Errorf("Trying to write salt buffer to file, got: %w", err)
+	}
+	if saltBytesWriten != len(c.salt) {
+		return fmt.Errorf("Number of bytes writen: %d differs from the amount of bytes in c.salt: %d", saltBytesWriten, len(c.salt))
+	}
+	// Writing nonce 
 	nonceBytesWriten, err := c.out.Write(c.cr.NonceSource)
 	if err != nil {
 		return fmt.Errorf("Trying to write nonce source buffer to file, got: %w", err)
@@ -280,6 +293,7 @@ func (c cryptData) Encrypt() error {
 	// cryptBuf and plainBuf are just cr.Out and cr.In
 	// TODO:
 	// their making should be done in handler, not here
+	fmt.Printf("DEBUG: %+v\n", c.cr)
 	var chunksAmount uint16
 	chunksAmount = uint16(0)
 	var lastChunkSize uint16
@@ -335,6 +349,7 @@ func (c cryptData) Encrypt() error {
 	if headerBytesWriten != len(headerBuf) {
 		return fmt.Errorf("Number of bytes writen differs from the amount of bytes in headerBuf(128)")
 	}
+	fmt.Printf("DEBUG: %+v\n", c.h)
 	return nil
 }
 
@@ -348,6 +363,7 @@ func (c cryptData) Decrypt() error {
 		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", len(headerBuf), readIntoHeaderBuf)
 	}
 	c.h.Decode(&headerBuf)
+	fmt.Printf("DEBUG: %+v\n", c.h)
 	// mv
 	saltBuff := make([]byte, int(c.h.ArgonParams.SaltLength)) 
 	readIntoSaltBuff, err := c.in.Read(saltBuff)
@@ -362,44 +378,57 @@ func (c cryptData) Decrypt() error {
 		Header: c.h.ArgonParams,
 		Salt: saltBuff,
 	}
+	//
+	fmt.Printf("DEBUG: %+v\n", argonParams)
 	key, err  := GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
 	}
+
 	nonceSource := make([]byte, c.h.NonceSourceLen)
+	readIntoNonceSourceBuff, err := c.in.Read(nonceSource)
+	if err != nil {
+		return fmt.Errorf("Reading nonce source from file to buffer, got: %w", err)
+	}
+	if readIntoNonceSourceBuff != int(c.h.NonceSourceLen) {
+		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", c.h.NonceSourceLen, readIntoNonceSourceBuff)
+	}
 	crypter := aes256gcm.GetAES256GCM()
+	c.cr.NonceSource = nonceSource
 
 	overhead, err := crypter.GetOverhead(key)
 	if err != nil {
 		return fmt.Errorf("Getting overhead, got: %w", err)
 	}
-	headr := header.GetDefaultHeader()
-	plainDataChunkSize := headr.ChunkSize - overhead 
+//	headr := header.GetDefaultHeader()
+	plainDataChunkSize := c.h.ChunkSize - overhead 
 	plainBuf := make([]byte, plainDataChunkSize)
 
 	// Its a little bit strange that i redefine c here, maybe redesign
 	c = cryptData{
-		h: headr,
+		h: c.h,
 		cr: cryptochunk.CryptChunk{
-			In: make([]byte, headr.ChunkSize),
+			In: make([]byte, c.h.ChunkSize),
 			Out: plainBuf,
 			Key: key,
 			NonceSource: nonceSource,
 			ChunkPosition: 0,
 			Crypter: crypter,
 		},
+		salt: saltBuff,
 		in: c.in,
 		out: c.out,
 	}
 
-	readNonceSource, err := c.in.Read(c.cr.NonceSource)
-	if err != nil {
-		return fmt.Errorf("Reading nonce source bytes, got: %w", err)
-	}
-	// What about comparison with c.h.NonceSourceLen ?
-	if readNonceSource != len(c.cr.NonceSource) {
-		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(c.cr.NonceSource))
-	}
+//	readNonceSource, err := c.in.Read(c.cr.NonceSource)
+//	if err != nil {
+//		return fmt.Errorf("Reading nonce source bytes, got: %w", err)
+//	}
+//	// What about comparison with c.h.NonceSourceLen ?
+//	if readNonceSource != len(c.cr.NonceSource) {
+//		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(c.cr.NonceSource))
+//	}
+	fmt.Printf("DEBUG: %+v\n", c.cr)
 	var readIntoCrypt int
 	var readIntoPlain int
 	var writeToOut int
@@ -499,6 +528,5 @@ func GetKey(P argon2id.Params) ([]byte, error) {
 	if len(key) != 32 {
 		return nil, fmt.Errorf("Invalid key length: %d", len(key))
 	}
-
 	return key, nil
 }
