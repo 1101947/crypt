@@ -25,6 +25,18 @@ type CryptHandler struct {
 }
 //
 
+// Encrypt
+// Get default params
+// Parse user set params
+// Header.Write
+// Salt.Generate
+// Salt.Write
+// GetKey
+// Nonce.Generate
+// Nonce.Write
+//
+
+
 type EncryptHandler CryptHandler
 
 func NewEncryptHandler() EncryptHandler {
@@ -299,20 +311,27 @@ func (c cryptData) Encrypt() error {
 	var lastChunkSize uint16
 	var readIntoPlain int
 	var writeToOut int
+
+	fmt.Printf("DEBUG: chunks amount: %d \n", chunksAmount)
 	for {
-		readIntoPlain, err = c.in.Read(c.cr.In)
-		if err == io.EOF && readIntoPlain == 0 {
-			//TODO: handle
+		//readIntoPlain, err = c.in.Read(c.cr.In)
+		readIntoPlain, err = io.ReadFull(c.in, c.cr.In)
+		if err == io.ErrUnexpectedEOF {
+			break
+		}
+		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
 		}
 		if readIntoPlain <= 0 {
-			return fmt.Errorf("Have read invalid number of bytes")
+		//if readIntoPlain < 0 {
+			return fmt.Errorf("Have read invalid number of bytes: %d", readIntoPlain)
 		} 
 		// cr is cryptochunk
 		chunksAmount++
+		fmt.Printf("DEBUG: chunk: %d , len: %d, cap: %d", chunksAmount, len(c.cr.In), cap(c.cr.In))
 		c.cr.ChunkPosition = chunksAmount 
 		err = c.cr.Encrypt()
 		if err != nil {
@@ -325,12 +344,31 @@ func (c cryptData) Encrypt() error {
 		if writeToOut != len(c.cr.Out) {
 			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
 		}
+		//c.cr.In = c.cr.In[:0]
+		fmt.Printf(" after len: %d, cap: %d\n", len(c.cr.In), cap(c.cr.In))
 	}
 	if readIntoPlain < 0 {
 		return fmt.Errorf("Invalid number of bytes read from file: negative: %d", readIntoPlain)
 	}
-	lastChunkSize = uint16(readIntoPlain) + c.h.Overhead 
-
+	lastChunkSize = 0
+	fmt.Println("DEBUG: readIntoPlain : %d\n", readIntoPlain)
+	if readIntoPlain > 0 {
+		//c.cr.In[readIntoPlain:]
+		lastChunkSize = uint16(readIntoPlain) + c.h.Overhead 
+		c.cr.ChunkPosition = chunksAmount + 1
+		fmt.Printf("DEBUG: last chunk! %+v\n", c.cr)
+		err = c.cr.Encrypt()
+		if err != nil {
+			return fmt.Errorf("Encrypting, got: %w", err)
+		}
+		writeToOut, err = c.out.Write(c.cr.Out)
+		if err != nil {
+			return fmt.Errorf("Writing to output file, got: %w", err)
+		}
+		if writeToOut != len(c.cr.Out) {
+			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+		}
+	}
 	offset, err := c.out.Seek(0, io.SeekStart)
 	if err != nil {
 		return fmt.Errorf("Seeking for the start of the file to rewrite the header, got: %w", err)
@@ -428,13 +466,15 @@ func (c cryptData) Decrypt() error {
 //	if readNonceSource != len(c.cr.NonceSource) {
 //		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(c.cr.NonceSource))
 //	}
-	fmt.Printf("DEBUG: %+v\n", c.cr)
+	//fmt.Printf("DEBUG: %+v\n", c.cr)
 	var readIntoCrypt int
 	var readIntoPlain int
 	var writeToOut int
 	var chunksPos int
 	chunksAmount := int(c.h.ChunksAmount)
-	for chunksPos=1;chunksPos<chunksAmount;chunksPos++ {
+	fmt.Printf("DEBUG: chunks amount: %d %d\n", c.h.ChunksAmount, chunksAmount)
+	for chunksPos=1;chunksPos<=chunksAmount;chunksPos++ {
+		fmt.Printf("DEBUG: chunk: %d\n", chunksPos)
 		readIntoCrypt, err = c.in.Read(c.cr.In)
 		if err == io.EOF && readIntoPlain == 0 {
 			//TODO: handle
@@ -459,17 +499,33 @@ func (c cryptData) Decrypt() error {
 			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
 		}
 	}
-	c.cr.ChunkPosition = c.cr.ChunkPosition + 1
-	err = c.cr.Decrypt()
-	if err != nil {
-		return fmt.Errorf("Decrypting, got: %w", err)
-	}
-	writeToOut, err = c.out.Write(c.cr.Out[:c.h.LastChunkSize])
-	if err != nil {
-		return fmt.Errorf("Writing to output file, got: %w", err)
-	}
-	if writeToOut != len(c.cr.Out) {
-		return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+	fmt.Println("Ahhhhhtung!")
+	if c.h.LastChunkSize != 0 {
+		readIntoCrypt, err = c.in.Read(c.cr.In)
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
+		}
+		if readIntoCrypt <= 0 {
+			return fmt.Errorf("Have read invalid number of bytes")
+		} 
+		c.cr.ChunkPosition = c.cr.ChunkPosition + 1
+		fmt.Printf("DEBUG: last chunk! %+v\n", c.cr)
+		err = c.cr.Decrypt()
+		if err != nil {
+			fmt.Println("Arrrh, the problem here!")
+			return fmt.Errorf("Decrypting, got: %w", err)
+		}
+		realData := (c.h.LastChunkSize - c.h.Overhead)
+		writeToOut, err = c.out.Write(c.cr.Out[:realData])
+		if err != nil {
+			return fmt.Errorf("Writing to output file, got: %w", err)
+		}
+		if writeToOut != len(c.cr.Out[:realData]) {
+			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+		}
+		fmt.Println("DEBUG: write to out: %d\n", writeToOut)
+
+
 	}
 	return nil
 }
