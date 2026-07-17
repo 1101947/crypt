@@ -11,12 +11,12 @@ git clone https://github.com/1101947/crypt.git
 ```
 ## Building:
 ``` sh
-go build -ldflags="-X 'main.isBuilt=true' -X 'main.version=v$(git show -s --format=%cd --date=iso-strict HEAD)__$(git rev-parse --short HEAD)'" -o main *.go
+go build -ldflags="-X 'main.isBuilt=true' -X 'main.version=v$(git show -s --format=%cd --date=iso-strict HEAD)__$(git rev-parse --short HEAD)'" -o crypt *.go
 ```
 ## System installation:
 Simply put generated executable "main" in current directory in any PATH directory of your liking, for example:
 ``` sh
-cp main ~/.local/bin/crypt
+cp crypt ~/.local/bin/crypt
 ```
 
 # Usage
