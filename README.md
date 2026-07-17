@@ -1,5 +1,9 @@
 # Crypt
 
+# License
+This project is licensed uder GPLv3, for more information see LICENSE.txt
+
+
 Formats:
     Stream:
         Starts with the header, but without information about chunks amount and last chunk size.
