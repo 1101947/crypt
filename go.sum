@@ -1,3 +1,5 @@
+github.com/1101947/cliargumentrouter v0.0.0-20260430200107-ca8d6d16b320 h1:Pk2ebhnJ5LsuUSU5L33FE9xfu/r/b9SIh+IPxQ+LPAE=
+github.com/1101947/cliargumentrouter v0.0.0-20260430200107-ca8d6d16b320/go.mod h1:w1ds8KHU8QdhaPw82K/OYhMkXfwRt3aOs6B6CKhstbg=
 golang.org/x/crypto v0.41.0 h1:WKYxWedPGCTVVl5+WHSSrOBT0O8lx32+zxmHxijgXp4=
 golang.org/x/crypto v0.41.0/go.mod h1:pO5AFd7FA68rFak7rOAGVuygIISepHftHnr8dr6+sUc=
 golang.org/x/sys v0.35.0 h1:vz1N37gP5bs89s7He8XuIYXpyY0+QlsKmzipCbUtyxI=
