@@ -1,12 +1,8 @@
 package main 
 
 import (
-	
 	"log"
-	//"bufio"
-	//"strings"
 	"os"
-	//"fmt"
 )
 
 var version string = "NOVERSION"
