@@ -121,7 +121,6 @@ func (E EncryptHandler) Process(posargs []string) error {
 	}
 
 	// isnt chunksize zero now and needs to be set ?
-	fmt.Println(headr.ChunkSize)
 	plainDataChunkSize := headr.ChunkSize - overhead 
 	plainBuf := make([]byte, int(plainDataChunkSize))
 
