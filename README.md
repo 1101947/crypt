@@ -1,9 +1,35 @@
 # Crypt
+is a simple encryption utility.
 
+# Installation
+## Downloading source code
+``` sh
+git clone https://github.com/1101947/crypt.git
+```
+## Building:
+``` sh
+go build -ldflags="-X 'main.isBuilt=true' -X 'main.version=v$(git show -s --format=%cd --date=iso-strict HEAD)__$(git rev-parse --short HEAD)'" -o main *.go
+```
+## System installation:
+Simply put generated executable "main" in current directory in any PATH directory of your liking, for example:
+``` sh
+cp main ~/.local/bin/crypt
+```
+
+# Usage
+To encrypt file, run:
+``` sh
+crypt encrypt --input="path-to-the-file-to-encrypt" --output="path-to-the-encrypted-file"
+```
+To decrypt file, run:
+``` sh
+crypt decrypt --input="path-to-the-encrypted-file" --output="path-to-the-decrypted-file"
+```
 # License
 This project is licensed uder GPLv3, for more information see LICENSE.txt
 
-
+# File format description
+TODO:
 Formats:
     Stream:
         Starts with the header, but without information about chunks amount and last chunk size.
