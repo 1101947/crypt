@@ -1,6 +1,9 @@
 # Crypt
 is a simple encryption utility.
 
+# Notice
+Not production ready !
+
 # Installation
 ## Downloading source code
 ``` sh
@@ -28,6 +31,7 @@ crypt decrypt --input="path-to-the-encrypted-file" --output="path-to-the-decrypt
 # License
 This project is licensed uder GPLv3, for more information see LICENSE.txt
 
+# Further text needs editing and not for reference.
 # File format description
 TODO:
 Formats:
