@@ -102,6 +102,7 @@ Decrypt parallel access -> parallel/random
 - store hmac/aead in header to verify it and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
 - add size check(check for number of numbers that chunkPosition can hold, safe amount of data you can encrypt with different nonces and same key for aes256gcm and chacha20poly1305)
 - add verification function/method for header and cryptData(crypt.go)
+- remove replace directive for cmdrouter in go.mod
 
 ## Consider:
 - adding  Steam format for streaming - each chunk have length field.
