@@ -1,9 +1,7 @@
 package chacha20poly1305
 
 import (
-	//"io"
 	"fmt"
-	//"crypto/rand"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
