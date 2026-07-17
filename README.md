@@ -31,6 +31,14 @@ crypt decrypt --input="path-to-the-encrypted-file" --output="path-to-the-decrypt
 # License
 This project is licensed uder GPLv3, for more information see LICENSE.txt
 
+# TODO:
+- store hmac/aead in header to verify it(header) and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
+- add size check(check for number of numbers that chunkPosition can hold, safe amount of data you can encrypt with different nonces and same key for aes256gcm and chacha20poly1305)
+- add verification function/method for header and cryptData(crypt.go)
+- add option to enable progress bar while en/decrypting
+- add tests, try to decrypted tampered files, try to change header bytes and random bytes, see how decryption will go.
+
+
 # Further text needs editing and not for reference.
 # File format description
 TODO:
@@ -130,14 +138,6 @@ Fixed-header format:
 
 Encrypt parallel/random access -> parallel 
 Decrypt parallel access -> parallel/random 
-
-## TODO:
-- read and encrypt large streams of byte by chuncks, with io.Reader([]byte) instead of io.ReadAll([]byte)
-- store hmac/aead in header to verify it and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
-- add size check(check for number of numbers that chunkPosition can hold, safe amount of data you can encrypt with different nonces and same key for aes256gcm and chacha20poly1305)
-- add verification function/method for header and cryptData(crypt.go)
-- remove replace directive for cmdrouter in go.mod
-
 ## Consider:
 - adding  Steam format for streaming - each chunk have length field.
 // type Stream struct {}
