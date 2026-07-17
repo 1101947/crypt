@@ -56,7 +56,6 @@ func TestCryptReturn(t *testing.T) {
 	}
 
 	plainData := []byte("la la la just data it is")
-	//cipherData := make([]byte, len(plainData)+16) 
 
 	cipherData, err := aes.EncryptReturn(key, nonce, plainData)
 	if err != nil {

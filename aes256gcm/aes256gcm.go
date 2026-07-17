@@ -1,11 +1,9 @@
 package aes256gcm 
 
 import (
-	//"io"
 	"fmt"
 	"crypto/aes"
 	"crypto/cipher"
-	//"crypto/rand"
 )
 
 // key must be 32bytes
@@ -72,7 +70,6 @@ func (A AES256GCM) Encrypt(key, nonce, plainData, cipherData []byte) error {
 }
 
 func (A AES256GCM) Decrypt(key, nonce, cipherData, plainData []byte) error {
-	//decrypted := []byte{} 
 	if len(key) != 32 {
 		return fmt.Errorf("Key length is not 32 bytes")
 	}
@@ -131,7 +128,6 @@ func (A AES256GCM) EncryptReturn(key, nonce, plainData []byte) ([]byte, error) {
 }
 
 func (A AES256GCM) DecryptReturn(key, nonce, cipherData []byte) ([]byte, error) {
-	//decrypted := []byte{} 
 	if len(key) != 32 {
 		return nil, fmt.Errorf("Key length is not 32 bytes")
 	}
