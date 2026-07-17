@@ -44,7 +44,7 @@ Formats:
     Fixed header:
         Starts with the fixed header just like streamed one, but contains information about chunks amount and last chunk size.
     Dynamic header:
-        Starts with the same header as streamed one , but chunks doesnt has a finality flag and also file has dynamic header at the end, which contains merkle tree and table/log
+        Starts with the same header as streamed one , but chunks doesn't have a finality flag and also file has dynamic header at the end, which contains merkle tree and table/log
 
 # 0: Fixed header only file 
 { Header: {
