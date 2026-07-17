@@ -15,7 +15,6 @@ type Crypter interface {
 
 type CryptChunk struct {
 	In, Out, Key, NonceSource []byte
-	// TODO: what is overflow ?
 	// TODO: consider changing type of ChunkPosition to int
 	ChunkPosition uint16
 	Crypter Crypter
@@ -29,7 +28,7 @@ func (C CryptChunk) Encrypt() error {
 	}
 	return nil
 }
-//
+
 func (C CryptChunk) Decrypt() error {
 	nonce := GenerateNonce(C.NonceSource, C.ChunkPosition)
 	err := C.Crypter.Decrypt(C.Key, nonce, C.In, C.Out)
@@ -38,9 +37,7 @@ func (C CryptChunk) Decrypt() error {
 	}
 	return nil
 }
-//
-//// assumption : uint16 is 2bytes long
-////              nonce and nonce source is 12bytes long
+
 //// TODO: make sure this works correctly
 func GenerateNonce(source []byte, chunkNumber uint16) []byte {
 	buf := make([]byte, len(source))
