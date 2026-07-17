@@ -2,7 +2,6 @@ package cryptochunk
 
 import (
 	"testing"
-	//"fmt"
 	"crypto/rand"
 	"crypt/aes256gcm"
 	"crypt/chacha20poly1305"
@@ -24,20 +23,16 @@ func TestCryptoChunkAes256Gcm(t *testing.T) {
 		ChunkPosition: 1,
 		Crypter: aes256gcm.GetAES256GCM(),  
 	}
-	//fmt.Printf("chnk1: %+v", chnk1)
 	err := chnk1.Encrypt()
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	//fmt.Printf("chnk1: %+v", chnk1)
 	chnk1.In = chnk1.Out
 	chnk1.Out = plainData2buf 
-	//fmt.Printf("chnk1: %+v", chnk1)
 	err = chnk1.Decrypt()
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	//fmt.Printf("\nResult: %+v , %+v\n", chnk1.Out, plainData2)
 	plainData2 = string(plainData2buf)
 	if plainData1 != plainData2 {
 		t.Errorf("Expected plainData1: \"%s\" to be equal to plainData2: \"%s\", but they are not.", plainData1, plainData2)
