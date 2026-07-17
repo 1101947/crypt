@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/1101947/cliargumentrouter/cmdrouter"
-
 )
 
 type Router map[string]cmdrouter.Handler
@@ -51,7 +50,6 @@ func (R Router) Process(posargs []string) error {
 }
 
 func (R Router) findHandler(posargs []string) (cmdrouter.Handler, int, error) {
-	//fmt.Println(strings.Join(posargs[:len(posargs)-1], " "))
 	for  i:=len(posargs);i>0;i-- {
 		p := strings.Join(posargs[:i], " ")
 		h, ok := R[p]
