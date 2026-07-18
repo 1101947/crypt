@@ -131,7 +131,6 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if len(cryptoFuncs) != 1 {
 			return fmt.Errorf("Only one encryption-function argument may be specified. You provided %d arguments.", len(cryptoFuncs))
 		}
-		fmt.Println(cryptoFuncs)
 		var cryptoFuncStr string
 		for _, v := range cryptoFuncs {
 			cryptoFuncStr = v
@@ -142,7 +141,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		}
 		var cryptoFunc [header.EncryptionFunctionNameSize]byte
 		cryptoFuncBytesCopied := copy(cryptoFunc[:], cryptoFuncStr)
-		if cryptoFuncBytesCopied != header.EncryptionFunctionNameSize {
+		if cryptoFuncBytesCopied != len(cryptoFuncStr) {
 			return fmt.Errorf("Wrong number of bytes copied, while copying encryption fucntion name: %d . Should have been copied %d", cryptoFuncBytesCopied, header.EncryptionFunctionNameSize)
 		}
 		E.Crypt.cryptData.h.EncryptionFunction = cryptoFunc
@@ -397,7 +396,7 @@ func (c cryptData) Encrypt() error {
 		c.cr.ChunkPosition = chunksAmount + 1
 		err = c.cr.Encrypt()
 		if err != nil {
-			return fmt.Errorf("Encrypting, got: %w", err)
+			return fmt.Errorf("Encrypting last chunk, got: %w", err)
 		}
 		writeToOut, err = c.out.Write(c.cr.Out)
 		if err != nil {

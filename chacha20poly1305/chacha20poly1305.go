@@ -25,11 +25,13 @@ func (C ChaCha20Poly1305) GetOverhead(key []byte) (uint16, error) {
 }
 
 func (C ChaCha20Poly1305) GetNonceSize(key []byte) (uint16, error) {
-	aead, err := chacha20poly1305.NewX(key)
-	if err != nil {
-		return 0, err
-	}
-	nonceSize := aead.Overhead()
+	//aead, err := chacha20poly1305.NewX(key)
+	//if err != nil {
+	//	return 0, err
+	//}
+	////nonceSize := aead.Overhead()
+	nonceSize := chacha20poly1305.NonceSizeX
+	//fmt.Printf("DEBUG: noncesizes: %d %d \n", nonceSize, aead.NonceSize())
 	if nonceSize < 0 {
 		return 0, fmt.Errorf("Invalid nonce size value: negative: %d", nonceSize)
 	}
