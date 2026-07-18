@@ -464,8 +464,6 @@ func (c cryptData) Decrypt() error {
 		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", c.h.NonceSourceLen, readIntoNonceSourceBuff)
 	}
 	c.cr.NonceSource = nonceSource
-	// HERE
-	fmt.Printf("DEBUG: %d\n", c.h.NonceSourceLen)
 	cryptoFuncName := string(c.h.EncryptionFunction[:])
 	if cryptoFuncName[:9] == "aes256gcm" {
 		c.cr.Crypter = aes256gcm.GetAES256GCM()
