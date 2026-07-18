@@ -39,11 +39,12 @@ func GetDefaultHeaderLessMemory() Header {
 
 const HeaderSize = 28
 
+// Most fields of this struct may be set by user
 type Header struct {
-	Version int64  
+	Version int64 // should not be set bu user 
 	Iterations uint32
 	Memory uint32
-	KeyLength uint32
+	KeyLength uint32 // should not be set by user
 	SaltLength uint16
 	Parallelism uint8
 }

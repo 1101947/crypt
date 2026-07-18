@@ -8,15 +8,17 @@ import (
 const Magic = "CRPT" 
 const Version = 0
 const HeaderSize int = 128
+const EncryptionFunctionNameSize = 16
+const MagicBytesSize = 4
 
 func GetDefaultHeader() FileHeader {
 	argonHeader := argon2id.GetDefaultHeader()
 	header := FileHeader{
-		Magic: [4]byte([]byte(Magic)),
+		Magic: [MagicBytesSize]byte([]byte(Magic)),
 		Version: int64(Version),
 		IsValid: false, 
 		IsLittleEndian: true,
-		EncryptionFunction: [16]byte{},
+		EncryptionFunction: [EncryptionFunctionNameSize]byte{},
 		NonceSourceLen: 0, // TODO  
 		ChunkSize: 1024, // TODO 
 		ChunksAmount: 0, // TODO 
@@ -28,19 +30,20 @@ func GetDefaultHeader() FileHeader {
 	return header
 }
 // using uint16 as maximum capacity uint to make it trivial(is this the right word?) to convert to int on both 32bit and 64bit platforms
+// Most fields of this struct should not be set by user
 type FileHeader struct {
-	Magic [4]byte // CRPT
-	Version int64 // version as a Timestamp 
+	Magic [MagicBytesSize]byte // CRPT
+	Version int64 // version as a Timestamp
 	IsValid bool
-	IsLittleEndian bool
-	EncryptionFunction [16]byte 
+	IsLittleEndian bool // may be set by user
+	EncryptionFunction [EncryptionFunctionNameSize]byte // may be set by user 
 	NonceSourceLen uint16
-	ChunkSize uint16
+	ChunkSize uint16 // may be set by user 
 	ChunksAmount uint16
 	LastChunkSize uint16
 	Overhead uint16
 	// TODO: rename to ArgonHeader
-	ArgonParams argon2id.Header
+	ArgonParams argon2id.Header // some fields may be set by user
 }
 
 func Compare(h1, h2 FileHeader) string {

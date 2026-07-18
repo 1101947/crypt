@@ -37,6 +37,7 @@ This project is licensed uder GPLv3, for more information see LICENSE.txt
 - add verification function/method for header and cryptData(crypt.go)
 - add option to enable progress bar while en/decrypting
 - add tests, try to decrypted tampered files, try to change header bytes and random bytes, see how decryption will go.
+- add Verify for argon header. KeyLen must be 32 byte long for both aes256gcm and chacha20poly1305. Remove user flag for setting key length.
 
 
 # Further text needs editing and not for reference.

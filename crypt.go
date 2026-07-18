@@ -20,197 +20,146 @@ type CryptHandler struct {
 	interactive string
 }
 
-type EncryptHandler CryptHandler
+type EncryptHandler struct {
+	Crypt CryptHandler 
+}
 
 func NewEncryptHandler() EncryptHandler {
-	c := NewCryptData()
 	return EncryptHandler{
-		cryptData: c,
-		interactive: "false",
+		Crypt: CryptHandler{
+			cryptData: NewCryptData(),
+			interactive: false,
+		},
 	}
 }
 
-type DecryptHandler CryptHandler
+type DecryptHandler struct {
+	Crypt CryptHandler 
+}
 
 func NewDecryptHandler() DecryptHandler {
-	c := NewCryptData()
 	return DecryptHandler{
-		cryptData: c,
-		interactive: "false",
+		Crypt: CryptHandler{
+			cryptData: NewCryptData(),
+			interactive: false,
+		},
 	}
 }
 
+func NewCryptData() cryptData {
+	c := cryptData{
+		h: header.GetDefaultHeader(),
+		cr: cryptochunk.CryptChunk{},
+		salt: nil,
+		in: nil, 
+		out: nil,
+	}
+	return c
+} 
+
+type cryptData struct {
+	h header.FileHeader
+	cr cryptochunk.CryptChunk
+	salt []byte
+	in, out *os.File
+}
+
+
+func (C CryptHandler) Process(posargs []string) error {
+	flags := flag.DefaultFlags("--", "=", posargs)
+	err := flags.Parse()
+	if err != nil {
+		return fmt.Errorf("Parsing cli arguments, got: %w", err)
+	}
+	kwargs, posargs := flags.Extract()
+	inputVals, ok := kwargs["input"]
+	if !ok {
+		return fmt.Errorf("Input argument must be specified.")
+	}
+	if len(inputVals) != 1 {
+		return fmt.Errorf("Only one input argument must be specified.")
+	}
+	var input string
+	for _, v := range inputVals {
+		input = v
+		break
+	}
+	// TODO: should i add some verification os.Stat(); !os.IsNotExist(), file.IsDir() ?
+	inputRD, err := os.Open(input)
+	if err != nil {
+		return fmt.Errorf("Trying to open file, got : %w", err)
+	}
+	defer inputRD.Close()
+
+	outputVals, ok := kwargs["output"]
+	if !ok {
+		return fmt.Errorf("Output argument must be specified.")
+	}
+	if len(outputVals) != 1 {
+		return fmt.Errorf("Only one output argument must be specified.")
+	}
+	var output string
+	for _, v := range outputVals {
+		output = v
+		break
+	}
+	outputWR, err := os.Create(output)
+	if err != nil {
+		return fmt.Errorf("Trying to create file, got : %w", err)
+	}
+	defer outputWR.Close()
+
+	C.cryptData.in = inputRD
+	C.cryptData.out = outputWR
+
+}
 
 func (E EncryptHandler) Process(posargs []string) error {
-	// TODO: maybe put flags inside EncryptionHandler ?
+	D.crypt.Process(posargs)
+
 	flags := flag.DefaultFlags("--", "=", posargs)
 	err := flags.Parse()
 	if err != nil {
 		return fmt.Errorf("Parsing cli arguments, got: %w", err)
 	}
 	kwargs, posargs := flags.Extract()
-	inputVals, ok := kwargs["input"]
-	if !ok {
-		return fmt.Errorf("Input argument must be specified.")
-	}
-	if len(inputVals) != 1 {
-		return fmt.Errorf("Only one input argument must be specified.")
-	}
-	var input string
-	for _, v := range inputVals {
-		input = v
-		break
-	}
-	// TODO: should i add some verification os.Stat(); !os.IsNotExist(), file.IsDir() ?
-	inputRD, err := os.Open(input)
-	if err != nil {
-		return fmt.Errorf("Trying to open file, got : %w", err)
-	}
-	defer inputRD.Close()
 
-	outputVals, ok := kwargs["output"]
-	if !ok {
-		return fmt.Errorf("Output argument must be specified.")
-	}
-	if len(outputVals) != 1 {
-		return fmt.Errorf("Only one output argument must be specified.")
-	}
-	var output string
-	for _, v := range outputVals {
-		output = v
-		break
-	}
-	outputWR, err := os.Create(output)
-	if err != nil {
-		return fmt.Errorf("Trying to create file, got : %w", err)
-	}
-	defer outputWR.Close()
-
-	argonHeader := argon2id.GetDefaultHeader()
-	salt, err := argon2id.GetSalt(argonHeader.SaltLength)
-	if err != nil {
-		return fmt.Errorf("Generating salt for argon2id function, got: %w", err)
-	}
-	argonParams := argon2id.Params{
-		Header: argonHeader,
-		Salt: salt,
-	}
-	// Do get key realy need argonParams as a param ?
-	key, err  := GetKey(argonParams)
-	if err != nil {
-		return fmt.Errorf("Geting key from user, got: %w", err)
-	}
-	headr := header.GetDefaultHeader()
-
-	crypter := aes256gcm.GetAES256GCM()
-
-	overhead, err := crypter.GetOverhead(key)
-	if err != nil {
-		return fmt.Errorf("Getting overhead, got: %w", err)
-	}
-	headr.Overhead = overhead 
-
-	nonceSourceLen, err := crypter.GetNonceSize(key)
-	if err != nil {
-		return fmt.Errorf("Getting nonce source size, got: %w", err)
-	}
-	headr.NonceSourceLen = nonceSourceLen
-	nonceSource := make([]byte, nonceSourceLen)
-
-	_, err = rand.Read(nonceSource)
-	if err != nil {
-		return fmt.Errorf("Reading random bytes into nonceSource buffer, got: %w", err)
-	}
-
-	// isnt chunksize zero now and needs to be set ?
-	plainDataChunkSize := headr.ChunkSize - overhead 
-	plainBuf := make([]byte, int(plainDataChunkSize))
-
-	c := cryptData{
-		h: headr,
-		cr: cryptochunk.CryptChunk{
-			In: plainBuf,
-			Out: make([]byte, headr.ChunkSize),
-			Key: key,
-			NonceSource: nonceSource,
-			ChunkPosition: 0,
-			Crypter: crypter,
-		},
-		salt: salt,
-		in: inputRD,
-		out: outputWR,
-	}
-	err = c.Encrypt()
-	return err 
-}
-
-func (D DecryptHandler) Process(posargs []string) error {
-	// TODO: maybe put flags inside EncryptionHandler ?
-	flags := flag.DefaultFlags("--", "=", posargs)
-	err := flags.Parse()
-	if err != nil {
-		return fmt.Errorf("Parsing cli arguments, got: %w", err)
-	}
-	kwargs, posargs := flags.Extract()
-	inputVals, ok := kwargs["input"]
-	if !ok {
-		return fmt.Errorf("Input argument must be specified.")
-	}
-	if len(inputVals) != 1 {
-		return fmt.Errorf("Only one input argument must be specified.")
-	}
-	var input string
-	for _, v := range inputVals {
-		input = v
-		break
-	}
-	// TODO: should i add some verification os.Stat(); !os.IsNotExist(), file.IsDir() ?
-	inputRD, err := os.Open(input)
-	if err != nil {
-		return fmt.Errorf("Trying to open file, got : %w", err)
-	}
-	defer inputRD.Close()
-
-	outputVals, ok := kwargs["output"]
-	if !ok {
-		return fmt.Errorf("Output argument must be specified.")
-	}
-	if len(outputVals) != 1 {
-		return fmt.Errorf("Only one output argument must be specified.")
-	}
-	var output string
-	for _, v := range outputVals {
-		output = v
-		break
-	}
-	outputWR, err := os.Create(output)
-	if err != nil {
-		return fmt.Errorf("Trying to create file, got : %w", err)
-	}
-	defer outputWR.Close()
-
-	// TODO: add option to use big endian
-	nonceSourceLens, ok := kwargs["nonce-len"]
+	// TODO: add flag for endianness
+	cryptoFuncs, ok := kwargs["encryption-function"]
 	if ok {
-		if len(nonceSourceLens) != 1 {
-			return fmt.Errorf("Only one nonce-len argument may be specified. You provided %d arguments.", len(nonceSourceLens))
+		if len(cryptoFuncs) != 1 {
+			return fmt.Errorf("Only one encryption-function argument may be specified. You provided %d arguments.", len(cryptoFuncs))
 		}
-		var nonceSourceLenS string
-		for _, v := range nonceSourceLens {
-			nonceSourceLenS = v
+		var cryptoFuncStr string
+		for _, v := range cryptoFuncs {
+			cryptoFuncStr = v
 			break
 		}
-		// TODO: maybe add check on whether system is 64 or 32 , and use 32 as third parameter if system is 32bit
-		// It seems to me, that strconv.ParseUint just doesnt fail when value is too big, just silently trims it.
-		nonceSourceLen64, err := strconv.ParseUint(nonceSourceLenS, 10, 64)
-		if err != nil {
-			return fmt.Errorf("Parsing nonce-len to uint64, got: %w", err)
+		if cryptoFuncStr != "aes256gcm" && cryptoFuncStr != "chacha20poly1305" {
+			return fmt.Errorf("Invalid encryption function specified: %s . Must be either aes256gcm or chacha20poly1305.", cryptoFuncStr)
 		}
-		if nonceSourceLen64 > math.MaxUint16 {
-			return fmt.Errorf("Your nonce-len value is too big: %d", nonceSourceLen64)
+		var cryptoFunc [header.EncryptionFunctionNameSize]byte
+		cryptoFuncBytesCopied := copy(cryptoFunc[:], cryptoFuncStr)
+		if cryptoFuncBytesCopied != header.EncryptionFunctionNameSize {
+			return fmt.Errorf("Wrong number of bytes copied, while copying encryption fucntion name: %d . Should have been copied %d", cryptoFuncBytesCopied, header.EncryptionFunctionNameSize)
 		}
-		D.cryptData.h.NonceSourceLen = uint16(nonceSourceLen64)
+		C.cryptData.h.ChunkSize = cryptoFunc
 	}
+	argonIterations, ok := kwargs["argon-iteration"]
+	if ok {
+		if len(argonIterations) != 1 {
+			return fmt.Errorf("Only one argon-iteration argument may be specified. You provided %d arguments.", len(argonIterations))
+		}
+		var argonIteration string
+		for _, v := range argonIterations {
+			argonIteration = v
+			break
+		}
+		argonIteration64, err := strconv.ParseUint(argonIteration, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Parsing argon-iteration to uint64, got: %w", err)
+		}
+
 
 	chunkSizes, ok := kwargs["chunk-size"]
 	if ok {
@@ -222,6 +171,9 @@ func (D DecryptHandler) Process(posargs []string) error {
 			chunkSizeStr = v
 			break
 		}
+		// TODO: add option to use big endian
+		// TODO: maybe add check on whether system is 64 or 32 , and use 32 as third parameter if system is 32bit
+		// It seems to me, that strconv.ParseUint just doesnt fail when value is too big, just silently trims it.
 		chunkSize64, err := strconv.ParseUint(chunkSizeStr, 10, 64)
 		if err != nil {
 			return fmt.Errorf("Parsing chunk-size to uint64, got: %w", err)
@@ -229,7 +181,7 @@ func (D DecryptHandler) Process(posargs []string) error {
 		if chunkSize64 > math.MaxUint16 {
 			return fmt.Errorf("Your chunk-size value is too big: %d", chunkSize64)
 		}
-		D.cryptData.h.ChunkSize= uint16(chunkSize64)
+		C.cryptData.h.ChunkSize= uint16(chunkSize64)
 	}
 	argonIterations, ok := kwargs["argon-iteration"]
 	if ok {
@@ -248,7 +200,7 @@ func (D DecryptHandler) Process(posargs []string) error {
 		if argonIteration64 > math.MaxUint32 {
 			return fmt.Errorf("Your argon-iteration value is too big: %d . Maximum value is: %d", argonIteration64, math.MaxUint32)
 		}
-		D.cryptData.h.ArgonParams.Iterations= uint32(argonIteration64)
+		C.cryptData.h.ArgonParams.Iterations= uint32(argonIteration64)
 	}
 	argonMemories, ok := kwargs["argon-memory"]
 	if ok {
@@ -267,26 +219,7 @@ func (D DecryptHandler) Process(posargs []string) error {
 		if argonMemory64 > math.MaxUint32 {
 			return fmt.Errorf("Your argon-memory value is too big: %d . Maximum value is: %d", argonMemory64, math.MaxUint32)
 		}
-		D.cryptData.h.ArgonParams.Memory = uint32(argonMemory64)
-	}
-	argonKeyLengths, ok := kwargs["argon-key-length"]
-	if ok {
-		if len(argonKeyLengths) != 1 {
-			return fmt.Errorf("Only one argon-key-length argument may be specified. You provided %d arguments.", len(argonKeyLengths))
-		}
-		var argonKeyLengthStr string
-		for _, v := range argonKeyLengths {
-			argonKeyLengthStr = v
-			break
-		}
-		argonKeyLength64, err := strconv.ParseUint(argonKeyLengthStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("Parsing argon-key-length to uint64, got: %w", err)
-		}
-		if argonKeyLength64 > math.MaxUint32 {
-			return fmt.Errorf("Your argon-key-length value is too big: %d . Maximum value is: %d", argonKeyLength64, math.MaxUint32)
-		}
-		D.cryptData.h.ArgonParams.KeyLength= uint32(argonKeyLength64)
+		C.cryptData.h.ArgonParams.Memory = uint32(argonMemory64)
 	}
 	argonSaltLengths, ok := kwargs["argon-salt-length"]
 	if ok {
@@ -305,7 +238,7 @@ func (D DecryptHandler) Process(posargs []string) error {
 		if argonSaltLength64 > math.MaxUint16 {
 			return fmt.Errorf("Your argon-salt-length value is too big: %d . Maximum value is: %d", argonSaltLength64, math.MaxUint16)
 		}
-		D.cryptData.h.ArgonParams.SaltLength= uint16(argonSaltLength64)
+		C.cryptData.h.ArgonParams.SaltLength= uint16(argonSaltLength64)
 	}
 	argonParallelisms, ok := kwargs["argon-parallelism"]
 	if ok {
@@ -324,37 +257,85 @@ func (D DecryptHandler) Process(posargs []string) error {
 		if argonParallelism64 > math.MaxUint8 {
 			return fmt.Errorf("Your argon-parallelism value is too big: %d . Maximum value is: %d", argonParallelism64, math.MaxUint8)
 		}
-		D.cryptData.h.ArgonParams.Parallelism = uint8(argonParallelism64)
+		C.cryptData.h.ArgonParams.Parallelism = uint8(argonParallelism64)
 	}
 
-
-
-
-	D.cryptData.in = inputRD
-	D.cryptData.out = outputWR
-	err = D.cryptData.Decrypt()
+	// TODO: maybe put flags inside EncryptionHandler ?
+	err = D.crypt.cryptData.Encrypt()
 	return err 
 }
 
-
-func NewCryptData() cryptData {
-	c := cryptData{
-		h: header.GetDefaultHeader(),
-		cr: cryptochunk.CryptChunk{},
-		in: nil, 
-		out: nil,
-	}
-	return c
-} 
-
-type cryptData struct {
-	h header.FileHeader
-	cr cryptochunk.CryptChunk
-	salt []byte
-	in, out *os.File
+func (D DecryptHandler) Process(posargs []string) error {
+	D.crypt.Process(posargs)
+	// TODO: maybe put flags inside EncryptionHandler ?
+	err = D.crypt.cryptData.Decrypt()
+	return err 
 }
 
 func (c cryptData) Encrypt() error {
+	//argonHeader := argon2id.GetDefaultHeader()
+	argonHeader := c.h.ArgonParams
+	salt, err := argon2id.GetSalt(argonHeader.SaltLength)
+	if err != nil {
+		return fmt.Errorf("Generating salt for argon2id function, got: %w", err)
+	}
+	argonParams := argon2id.Params{
+		Header: argonHeader,
+		Salt: salt,
+	}
+	key, err  := GetKey(argonParams)
+	if err != nil {
+		return fmt.Errorf("Geting key from user, got: %w", err)
+	}
+	// TODO: select crypter based on header.cryptofunc
+
+	cryptoFuncName := string(c.h.EncryptionFunction[:])
+	crypter := aes256gcm.GetAES256GCM()
+	if cryptoFuncName == "aes256gcm" {
+		crypter := aes256gcm.GetAES256GCM()
+	} else if cryptoFuncName == "chacha20poly1305" {
+		crypter := chacha20poly1305.GetChaCha20Poly1305()
+	} else {
+		return fmt.Errorf("Ivalid encryption function option in header: %s", cryptoFuncName)
+	}
+
+	overhead, err := crypter.GetOverhead(key)
+
+	if err != nil {
+		return fmt.Errorf("Getting overhead, got: %w", err)
+	}
+	c.h.Overhead = overhead 
+
+	nonceSourceLen, err := crypter.GetNonceSize(key)
+	if err != nil {
+		return fmt.Errorf("Getting nonce source size, got: %w", err)
+	}
+	c.h.NonceSourceLen = nonceSourceLen
+	nonceSource := make([]byte, nonceSourceLen)
+	nonceSourceBytesRead, err = rand.Read(nonceSource)
+	if err != nil {
+		return fmt.Errorf("Reading random bytes into nonceSource buffer, got: %w", err)
+	}
+	if nonceSourceBytesRead != nonceSourceLen {
+		return fmt.Errorf("Reading random bytes into nonceSource buffer: number of bytes should be equal to nonceSourceLen: %d, but is: %d", nonceSourceLen, nonceSourceBytesRead)
+	}
+	plainDataChunkSize := c.h.ChunkSize - overhead 
+	plainBuf := make([]byte, int(plainDataChunkSize))
+	c := cryptData{
+		h: c.h,
+		cr: cryptochunk.CryptChunk{
+			In: plainBuf,
+			Out: make([]byte, c.h.ChunkSize),
+			Key: key,
+			NonceSource: nonceSource,
+			ChunkPosition: 0,
+			Crypter: crypter,
+		},
+		salt: salt,
+		in: inputRD,
+		out: outputWR,
+	}
+
 	var headerBuf [128]byte 
 	c.h.Encode(&headerBuf)
 	headerBytesWriten, err := c.out.Write(headerBuf[:])
