@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypt/argon2id"
 	"crypt/aes256gcm"
+	"crypt/chacha20poly1305"
 	"crypt/header"
 	"crypt/cryptochunk"
 	"golang.org/x/term"
@@ -28,7 +29,7 @@ func NewEncryptHandler() EncryptHandler {
 	return EncryptHandler{
 		Crypt: CryptHandler{
 			cryptData: NewCryptData(),
-			interactive: false,
+			interactive: "false",
 		},
 	}
 }
@@ -41,7 +42,7 @@ func NewDecryptHandler() DecryptHandler {
 	return DecryptHandler{
 		Crypt: CryptHandler{
 			cryptData: NewCryptData(),
-			interactive: false,
+			interactive: "false",
 		},
 	}
 }
@@ -65,7 +66,7 @@ type cryptData struct {
 }
 
 
-func (C CryptHandler) Process(posargs []string) error {
+func (C *CryptHandler) Process(posargs []string) error {
 	flags := flag.DefaultFlags("--", "=", posargs)
 	err := flags.Parse()
 	if err != nil {
@@ -89,7 +90,6 @@ func (C CryptHandler) Process(posargs []string) error {
 	if err != nil {
 		return fmt.Errorf("Trying to open file, got : %w", err)
 	}
-	defer inputRD.Close()
 
 	outputVals, ok := kwargs["output"]
 	if !ok {
@@ -107,15 +107,16 @@ func (C CryptHandler) Process(posargs []string) error {
 	if err != nil {
 		return fmt.Errorf("Trying to create file, got : %w", err)
 	}
-	defer outputWR.Close()
 
 	C.cryptData.in = inputRD
 	C.cryptData.out = outputWR
-
+	return nil
 }
 
 func (E EncryptHandler) Process(posargs []string) error {
-	D.crypt.Process(posargs)
+	E.Crypt.Process(posargs)
+	defer E.Crypt.cryptData.in.Close()
+	defer E.Crypt.cryptData.out.Close()
 
 	flags := flag.DefaultFlags("--", "=", posargs)
 	err := flags.Parse()
@@ -130,12 +131,13 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if len(cryptoFuncs) != 1 {
 			return fmt.Errorf("Only one encryption-function argument may be specified. You provided %d arguments.", len(cryptoFuncs))
 		}
+		fmt.Println(cryptoFuncs)
 		var cryptoFuncStr string
 		for _, v := range cryptoFuncs {
 			cryptoFuncStr = v
 			break
 		}
-		if cryptoFuncStr != "aes256gcm" && cryptoFuncStr != "chacha20poly1305" {
+		if (cryptoFuncStr != "aes256gcm") && (cryptoFuncStr != "chacha20poly1305") {
 			return fmt.Errorf("Invalid encryption function specified: %s . Must be either aes256gcm or chacha20poly1305.", cryptoFuncStr)
 		}
 		var cryptoFunc [header.EncryptionFunctionNameSize]byte
@@ -143,24 +145,8 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if cryptoFuncBytesCopied != header.EncryptionFunctionNameSize {
 			return fmt.Errorf("Wrong number of bytes copied, while copying encryption fucntion name: %d . Should have been copied %d", cryptoFuncBytesCopied, header.EncryptionFunctionNameSize)
 		}
-		C.cryptData.h.ChunkSize = cryptoFunc
+		E.Crypt.cryptData.h.EncryptionFunction = cryptoFunc
 	}
-	argonIterations, ok := kwargs["argon-iteration"]
-	if ok {
-		if len(argonIterations) != 1 {
-			return fmt.Errorf("Only one argon-iteration argument may be specified. You provided %d arguments.", len(argonIterations))
-		}
-		var argonIteration string
-		for _, v := range argonIterations {
-			argonIteration = v
-			break
-		}
-		argonIteration64, err := strconv.ParseUint(argonIteration, 10, 64)
-		if err != nil {
-			return fmt.Errorf("Parsing argon-iteration to uint64, got: %w", err)
-		}
-
-
 	chunkSizes, ok := kwargs["chunk-size"]
 	if ok {
 		if len(chunkSizes) != 1 {
@@ -181,7 +167,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if chunkSize64 > math.MaxUint16 {
 			return fmt.Errorf("Your chunk-size value is too big: %d", chunkSize64)
 		}
-		C.cryptData.h.ChunkSize= uint16(chunkSize64)
+		E.Crypt.cryptData.h.ChunkSize = uint16(chunkSize64)
 	}
 	argonIterations, ok := kwargs["argon-iteration"]
 	if ok {
@@ -200,7 +186,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonIteration64 > math.MaxUint32 {
 			return fmt.Errorf("Your argon-iteration value is too big: %d . Maximum value is: %d", argonIteration64, math.MaxUint32)
 		}
-		C.cryptData.h.ArgonParams.Iterations= uint32(argonIteration64)
+		E.Crypt.cryptData.h.ArgonParams.Iterations= uint32(argonIteration64)
 	}
 	argonMemories, ok := kwargs["argon-memory"]
 	if ok {
@@ -219,7 +205,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonMemory64 > math.MaxUint32 {
 			return fmt.Errorf("Your argon-memory value is too big: %d . Maximum value is: %d", argonMemory64, math.MaxUint32)
 		}
-		C.cryptData.h.ArgonParams.Memory = uint32(argonMemory64)
+		E.Crypt.cryptData.h.ArgonParams.Memory = uint32(argonMemory64)
 	}
 	argonSaltLengths, ok := kwargs["argon-salt-length"]
 	if ok {
@@ -238,7 +224,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonSaltLength64 > math.MaxUint16 {
 			return fmt.Errorf("Your argon-salt-length value is too big: %d . Maximum value is: %d", argonSaltLength64, math.MaxUint16)
 		}
-		C.cryptData.h.ArgonParams.SaltLength= uint16(argonSaltLength64)
+		E.Crypt.cryptData.h.ArgonParams.SaltLength= uint16(argonSaltLength64)
 	}
 	argonParallelisms, ok := kwargs["argon-parallelism"]
 	if ok {
@@ -257,18 +243,24 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonParallelism64 > math.MaxUint8 {
 			return fmt.Errorf("Your argon-parallelism value is too big: %d . Maximum value is: %d", argonParallelism64, math.MaxUint8)
 		}
-		C.cryptData.h.ArgonParams.Parallelism = uint8(argonParallelism64)
+		E.Crypt.cryptData.h.ArgonParams.Parallelism = uint8(argonParallelism64)
 	}
 
 	// TODO: maybe put flags inside EncryptionHandler ?
-	err = D.crypt.cryptData.Encrypt()
+	err = E.Crypt.cryptData.Encrypt()
 	return err 
 }
 
 func (D DecryptHandler) Process(posargs []string) error {
-	D.crypt.Process(posargs)
+	err := D.Crypt.Process(posargs)
+	if err != nil {
+		return err
+	}
+	defer D.Crypt.cryptData.in.Close()
+	defer D.Crypt.cryptData.out.Close()
+
 	// TODO: maybe put flags inside EncryptionHandler ?
-	err = D.crypt.cryptData.Decrypt()
+	err = D.Crypt.cryptData.Decrypt()
 	return err 
 }
 
@@ -290,38 +282,37 @@ func (c cryptData) Encrypt() error {
 	// TODO: select crypter based on header.cryptofunc
 
 	cryptoFuncName := string(c.h.EncryptionFunction[:])
-	crypter := aes256gcm.GetAES256GCM()
-	if cryptoFuncName == "aes256gcm" {
-		crypter := aes256gcm.GetAES256GCM()
+	if cryptoFuncName[:9] == "aes256gcm" {
+		c.cr.Crypter = aes256gcm.GetAES256GCM()
 	} else if cryptoFuncName == "chacha20poly1305" {
-		crypter := chacha20poly1305.GetChaCha20Poly1305()
+		c.cr.Crypter = chacha20poly1305.GetChaCha20Poly1305()
 	} else {
 		return fmt.Errorf("Ivalid encryption function option in header: %s", cryptoFuncName)
 	}
 
-	overhead, err := crypter.GetOverhead(key)
+	overhead, err := c.cr.Crypter.GetOverhead(key)
 
 	if err != nil {
 		return fmt.Errorf("Getting overhead, got: %w", err)
 	}
 	c.h.Overhead = overhead 
 
-	nonceSourceLen, err := crypter.GetNonceSize(key)
+	nonceSourceLen, err := c.cr.Crypter.GetNonceSize(key)
 	if err != nil {
 		return fmt.Errorf("Getting nonce source size, got: %w", err)
 	}
 	c.h.NonceSourceLen = nonceSourceLen
 	nonceSource := make([]byte, nonceSourceLen)
-	nonceSourceBytesRead, err = rand.Read(nonceSource)
+	nonceSourceBytesRead, err := rand.Read(nonceSource)
 	if err != nil {
 		return fmt.Errorf("Reading random bytes into nonceSource buffer, got: %w", err)
 	}
-	if nonceSourceBytesRead != nonceSourceLen {
+	if nonceSourceBytesRead != int(nonceSourceLen) {
 		return fmt.Errorf("Reading random bytes into nonceSource buffer: number of bytes should be equal to nonceSourceLen: %d, but is: %d", nonceSourceLen, nonceSourceBytesRead)
 	}
 	plainDataChunkSize := c.h.ChunkSize - overhead 
 	plainBuf := make([]byte, int(plainDataChunkSize))
-	c := cryptData{
+	c = cryptData{
 		h: c.h,
 		cr: cryptochunk.CryptChunk{
 			In: plainBuf,
@@ -329,16 +320,16 @@ func (c cryptData) Encrypt() error {
 			Key: key,
 			NonceSource: nonceSource,
 			ChunkPosition: 0,
-			Crypter: crypter,
+			Crypter: c.cr.Crypter,
 		},
 		salt: salt,
-		in: inputRD,
-		out: outputWR,
+		in: c.in,
+		out: c.out,
 	}
 
 	var headerBuf [128]byte 
 	c.h.Encode(&headerBuf)
-	headerBytesWriten, err := c.out.Write(headerBuf[:])
+	headerBytesWriten, err := (c.out).Write(headerBuf[:])
 	if err != nil {
 		return fmt.Errorf("Trying to write header buffer to file, got: %w", err)
 	}
