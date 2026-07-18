@@ -201,6 +201,7 @@ func (D DecryptHandler) Process(posargs []string) error {
 			break
 		}
 		// TODO: maybe add check on whether system is 64 or 32 , and use 32 as third parameter if system is 32bit
+		// It seems to me, that strconv.ParseUint just doesnt fail when value is too big, just silently trims it.
 		nonceSourceLen64, err := strconv.ParseUint(nonceSourceLenS, 10, 64)
 		if err != nil {
 			return fmt.Errorf("Parsing nonce-len to uint64, got: %w", err)
@@ -221,7 +222,7 @@ func (D DecryptHandler) Process(posargs []string) error {
 			chunkSizeStr = v
 			break
 		}
-		chunkSize64, err := strconv.ParseUint(chunkSizeStr, 10, 16)
+		chunkSize64, err := strconv.ParseUint(chunkSizeStr, 10, 64)
 		if err != nil {
 			return fmt.Errorf("Parsing chunk-size to uint64, got: %w", err)
 		}
@@ -230,6 +231,102 @@ func (D DecryptHandler) Process(posargs []string) error {
 		}
 		D.cryptData.h.ChunkSize= uint16(chunkSize64)
 	}
+	argonIterations, ok := kwargs["argon-iteration"]
+	if ok {
+		if len(argonIterations) != 1 {
+			return fmt.Errorf("Only one argon-iteration argument may be specified. You provided %d arguments.", len(argonIterations))
+		}
+		var argonIteration string
+		for _, v := range argonIterations {
+			argonIteration = v
+			break
+		}
+		argonIteration64, err := strconv.ParseUint(argonIteration, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Parsing argon-iteration to uint64, got: %w", err)
+		}
+		if argonIteration64 > math.MaxUint32 {
+			return fmt.Errorf("Your argon-iteration value is too big: %d . Maximum value is: %d", argonIteration64, math.MaxUint32)
+		}
+		D.cryptData.h.ArgonParams.Iterations= uint32(argonIteration64)
+	}
+	argonMemories, ok := kwargs["argon-memory"]
+	if ok {
+		if len(argonMemories) != 1 {
+			return fmt.Errorf("Only one argon-memory argument may be specified. You provided %d arguments.", len(argonMemories))
+		}
+		var argonMemoryStr string
+		for _, v := range argonMemories {
+			argonMemoryStr = v
+			break
+		}
+		argonMemory64, err := strconv.ParseUint(argonMemoryStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Parsing argon-memory to uint64, got: %w", err)
+		}
+		if argonMemory64 > math.MaxUint32 {
+			return fmt.Errorf("Your argon-memory value is too big: %d . Maximum value is: %d", argonMemory64, math.MaxUint32)
+		}
+		D.cryptData.h.ArgonParams.Memory = uint32(argonMemory64)
+	}
+	argonKeyLengths, ok := kwargs["argon-key-length"]
+	if ok {
+		if len(argonKeyLengths) != 1 {
+			return fmt.Errorf("Only one argon-key-length argument may be specified. You provided %d arguments.", len(argonKeyLengths))
+		}
+		var argonKeyLengthStr string
+		for _, v := range argonKeyLengths {
+			argonKeyLengthStr = v
+			break
+		}
+		argonKeyLength64, err := strconv.ParseUint(argonKeyLengthStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Parsing argon-key-length to uint64, got: %w", err)
+		}
+		if argonKeyLength64 > math.MaxUint32 {
+			return fmt.Errorf("Your argon-key-length value is too big: %d . Maximum value is: %d", argonKeyLength64, math.MaxUint32)
+		}
+		D.cryptData.h.ArgonParams.KeyLength= uint32(argonKeyLength64)
+	}
+	argonSaltLengths, ok := kwargs["argon-salt-length"]
+	if ok {
+		if len(argonSaltLengths) != 1 {
+			return fmt.Errorf("Only one argon-salt-length argument may be specified. You provided %d arguments.", len(argonSaltLengths))
+		}
+		var argonSaltLengthStr string
+		for _, v := range argonSaltLengths {
+			argonSaltLengthStr = v
+			break
+		}
+		argonSaltLength64, err := strconv.ParseUint(argonSaltLengthStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Parsing argon-salt-length to uint64, got: %w", err)
+		}
+		if argonSaltLength64 > math.MaxUint16 {
+			return fmt.Errorf("Your argon-salt-length value is too big: %d . Maximum value is: %d", argonSaltLength64, math.MaxUint16)
+		}
+		D.cryptData.h.ArgonParams.SaltLength= uint16(argonSaltLength64)
+	}
+	argonParallelisms, ok := kwargs["argon-parallelism"]
+	if ok {
+		if len(argonParallelisms) != 1 {
+			return fmt.Errorf("Only one argon-parallelism argument may be specified. You provided %d arguments.", len(argonParallelisms))
+		}
+		var argonParallelismStr string
+		for _, v := range argonParallelisms {
+			argonParallelismStr = v
+			break
+		}
+		argonParallelism64, err := strconv.ParseUint(argonParallelismStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Parsing argon-parallelism to uint64, got: %w", err)
+		}
+		if argonParallelism64 > math.MaxUint8 {
+			return fmt.Errorf("Your argon-parallelism value is too big: %d . Maximum value is: %d", argonParallelism64, math.MaxUint8)
+		}
+		D.cryptData.h.ArgonParams.Parallelism = uint8(argonParallelism64)
+	}
+
 
 
 
