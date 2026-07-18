@@ -463,10 +463,19 @@ func (c cryptData) Decrypt() error {
 	if readIntoNonceSourceBuff != int(c.h.NonceSourceLen) {
 		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", c.h.NonceSourceLen, readIntoNonceSourceBuff)
 	}
-	crypter := aes256gcm.GetAES256GCM()
 	c.cr.NonceSource = nonceSource
+	// HERE
+	fmt.Printf("DEBUG: %d\n", c.h.NonceSourceLen)
+	cryptoFuncName := string(c.h.EncryptionFunction[:])
+	if cryptoFuncName[:9] == "aes256gcm" {
+		c.cr.Crypter = aes256gcm.GetAES256GCM()
+	} else if cryptoFuncName == "chacha20poly1305" {
+		c.cr.Crypter = chacha20poly1305.GetChaCha20Poly1305()
+	} else {
+		return fmt.Errorf("Ivalid encryption function option in header: %s", cryptoFuncName)
+	}
 
-	overhead, err := crypter.GetOverhead(key)
+	overhead, err := c.cr.Crypter.GetOverhead(key)
 	if err != nil {
 		return fmt.Errorf("Getting overhead, got: %w", err)
 	}
@@ -482,7 +491,7 @@ func (c cryptData) Decrypt() error {
 			Key: key,
 			NonceSource: nonceSource,
 			ChunkPosition: 0,
-			Crypter: crypter,
+			Crypter: c.cr.Crypter,
 		},
 		salt: saltBuff,
 		in: c.in,
