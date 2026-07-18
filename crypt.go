@@ -4,6 +4,8 @@ import (
 	"io"
 	"os"
 	"fmt"
+	"math"
+	"strconv"
 	"crypto/rand"
 	"crypt/argon2id"
 	"crypt/aes256gcm"
@@ -187,11 +189,56 @@ func (D DecryptHandler) Process(posargs []string) error {
 	}
 	defer outputWR.Close()
 
+	// TODO: add option to use big endian
+	nonceSourceLens, ok := kwargs["nonce-len"]
+	if ok {
+		if len(nonceSourceLens) != 1 {
+			return fmt.Errorf("Only one nonce-len argument may be specified. You provided %d arguments.", len(nonceSourceLens))
+		}
+		var nonceSourceLenS string
+		for _, v := range nonceSourceLens {
+			nonceSourceLenS = v
+			break
+		}
+		// TODO: maybe add check on whether system is 64 or 32 , and use 32 as third parameter if system is 32bit
+		nonceSourceLen64, err := strconv.ParseUint(nonceSourceLenS, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Parsing nonce-len to uint64, got: %w", err)
+		}
+		if nonceSourceLen64 > math.MaxUint16 {
+			return fmt.Errorf("Your nonce-len value is too big: %d", nonceSourceLen64)
+		}
+		D.cryptData.h.NonceSourceLen = uint16(nonceSourceLen64)
+	}
+
+	chunkSizes, ok := kwargs["chunk-size"]
+	if ok {
+		if len(chunkSizes) != 1 {
+			return fmt.Errorf("Only one chunk-size argument may be specified. You provided %d arguments.", len(chunkSizes))
+		}
+		var chunkSizeStr string
+		for _, v := range chunkSizes {
+			chunkSizeStr = v
+			break
+		}
+		chunkSize64, err := strconv.ParseUint(chunkSizeStr, 10, 16)
+		if err != nil {
+			return fmt.Errorf("Parsing chunk-size to uint64, got: %w", err)
+		}
+		if chunkSize64 > math.MaxUint16 {
+			return fmt.Errorf("Your chunk-size value is too big: %d", chunkSize64)
+		}
+		D.cryptData.h.ChunkSize= uint16(chunkSize64)
+	}
+
+
+
 	D.cryptData.in = inputRD
 	D.cryptData.out = outputWR
 	err = D.cryptData.Decrypt()
 	return err 
 }
+
 
 func NewCryptData() cryptData {
 	c := cryptData{
