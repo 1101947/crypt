@@ -1,8 +1,10 @@
 package header
 
 import (
-       "encoding/binary"
-       "crypt/argon2id"
+	"fmt"
+	"errors"
+	"encoding/binary"
+	"crypt/argon2id"
 )
 
 const Magic = "CRPT" 
@@ -10,6 +12,8 @@ const Version = 0
 const HeaderSize int = 128
 const EncryptionFunctionNameSize = 16
 const MagicBytesSize = 4
+const EncFuncAes = "aes256gcm"
+const EncFuncChaCha = "chacha20poly1305"
 
 func GetDefaultHeader() FileHeader {
 	argonHeader := argon2id.GetDefaultHeader()
@@ -25,7 +29,7 @@ func GetDefaultHeader() FileHeader {
 		LastChunkSize: 0, // TODO 
 		ArgonParams: argonHeader,
 	}
-	encfunc := "aes256gcm"
+	encfunc := EncFuncAes 
 	_ = copy(header.EncryptionFunction[:], encfunc) 
 	return header
 }
@@ -44,6 +48,36 @@ type FileHeader struct {
 	Overhead uint16
 	// TODO: rename to ArgonHeader
 	ArgonParams argon2id.Header // some fields may be set by user
+}
+
+var errSetToInvalidHeader = errors.New("Header set to invalid.")
+func IsSetToInvalidHeader(err error) bool {
+	return errors.Is(err, errSetToInvalidHeader)
+} 
+
+func (F FileHeader) Verify() error {
+	if string(F.Magic[:]) != Magic {
+		return fmt.Errorf("Invalid magic.")
+	}
+	// TODO: consider adding check for version
+	if !F.IsValid {
+		return errSetToInvalidHeader 
+	} 
+	cryptFunc := string(F.EncryptionFunction[:])
+	if (cryptFunc[:9] != EncFuncAes) && (cryptFunc != EncFuncChaCha) {
+		return fmt.Errorf("Invalid encryption function: %s . Must be either %s or %s .", cryptFunc, EncFuncAes, EncFuncChaCha)
+	}
+	if F.ChunkSize == 0 {
+		return fmt.Errorf("Chunk size is set to zero. It must always be greater than zero.")
+	}
+	if F.NonceSourceLen == 0 {
+		return fmt.Errorf("Nonce source len is set to zero. It must always be greater than zero.")
+	}
+	if F.Overhead == 0 {
+		return fmt.Errorf("Overhead is set to zero. It must always be greater than zero")
+	}
+	return F.ArgonParams.Verify()
+
 }
 
 func Compare(h1, h2 FileHeader) string {

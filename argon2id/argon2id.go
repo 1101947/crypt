@@ -49,6 +49,27 @@ type Header struct {
 	Parallelism uint8
 }
 
+func (H Header) Verify() error {
+	// TODO: add check for version
+	if H.Iterations == 0 {
+		return fmt.Errorf("Iterations number is set to zero. It must always be greater than zero")
+	}
+	if H.Memory == 0 {
+		return fmt.Errorf("Memory is set to zero. It must always be greater than zero")
+	}
+	if H.SaltLength == 0 {
+		return fmt.Errorf("SaltLength is set to zero. It must always be greater than zero")
+	}
+	if H.Parallelism == 0 {
+		return fmt.Errorf("Parallelism is set to zero. It must always be greater than zero")
+	}
+	if H.KeyLength != 32 {
+		return fmt.Errorf("KeyLength is set to %d. It must always be set to 32", H.KeyLength)
+	}
+	return nil
+}
+
+
 func Compare(h1, h2 Header) string {
 	s := ""
 	if h1.Version != h2.Version {
