@@ -55,24 +55,12 @@ func (A AES256GCM) Encrypt(key, nonce, plainData, cipherData []byte) error {
 	if err != nil {
 		return err
 	}
-	// only for the first and last one
-	if len(nonce) != aesGCM.NonceSize() {
-		return fmt.Errorf("Invalid Nonce size, should be: %d , got: %d", aesGCM.NonceSize(), len(nonce))
-	}
-
-	// only for the first and last one
-	if len(cipherData) < len(plainData) + aesGCM.Overhead() {
-		return fmt.Errorf("Cipherdata buffer is too short. Must be at least %d bytes , but got: %d bytes", (len(plainData) + aesGCM.Overhead()), len(cipherData))
-	}
 	// cipherdata is writen to cipherData passed as first argument
 	_ = aesGCM.Seal(cipherData[:0], nonce, plainData, nil)
 	return nil
 }
 
 func (A AES256GCM) Decrypt(key, nonce, cipherData, plainData []byte) error {
-	if len(key) != 32 {
-		return fmt.Errorf("Key length is not 32 bytes")
-	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return err
@@ -80,13 +68,6 @@ func (A AES256GCM) Decrypt(key, nonce, cipherData, plainData []byte) error {
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
 		return err
-	}
-	if len(nonce) != aesGCM.NonceSize() {
-		return fmt.Errorf("Invalid Nonce size, should be: %d , got: %d", aesGCM.NonceSize(), len(nonce))
-	}
-	//if len(plainData) < len(cipherData) + aesGCM.Overhead() {
-	if len(plainData) < len(cipherData) - aesGCM.Overhead() {
-		return fmt.Errorf("Plaindata buffer is too short. Must be at least %d bytes , but got: %d bytes", (len(cipherData) + aesGCM.Overhead()), len(plainData))
 	}
 	_, err = aesGCM.Open(plainData[:0], nonce, cipherData, nil)
 	return err
