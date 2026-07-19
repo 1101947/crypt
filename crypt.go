@@ -326,6 +326,13 @@ func (c cryptData) Encrypt() error {
 		out: c.out,
 	}
 
+	err = c.h.Verify()
+	if !header.IsSetToInvalidHeader(err) {
+		if err == nil {
+			return fmt.Errorf("Verifying header before the encryption. Header must be set to invalid before encrypting.")
+		}
+		return fmt.Errorf("Verifying header before the encryption, got: %w", err)
+	}
 	var headerBuf [128]byte 
 	c.h.Encode(&headerBuf)
 	headerBytesWriten, err := (c.out).Write(headerBuf[:])
@@ -417,6 +424,10 @@ func (c cryptData) Encrypt() error {
 	c.h.LastChunkSize = lastChunkSize
 	c.h.IsValid = true
 	c.h.Encode(&headerBuf)
+	err = c.h.Verify()
+	if err != nil {
+		return fmt.Errorf("Verifying header after encryption, got: %w", err)
+	}
 	headerBytesWriten, err = c.out.Write(headerBuf[:])
 	if err != nil {
 		return fmt.Errorf("Trying to write header buffer to file, got: %w", err)
@@ -437,6 +448,10 @@ func (c cryptData) Decrypt() error {
 		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", len(headerBuf), readIntoHeaderBuf)
 	}
 	c.h.Decode(&headerBuf)
+	err = c.h.Verify()
+	if err != nil {
+		return fmt.Errorf("Verifying header, got: %w", err)
+	} 
 	saltBuff := make([]byte, int(c.h.ArgonParams.SaltLength)) 
 	readIntoSaltBuff, err := c.in.Read(saltBuff)
 	if err != nil {
