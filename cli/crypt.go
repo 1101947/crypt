@@ -87,6 +87,7 @@ func (C *CryptHandler) Process(posargs []string) error {
 
 	C.cryptData.In = inputRD
 	C.cryptData.Out = outputWR
+	C.cryptData.KeyGetter = cliKeyGetter("")
 	return nil
 }
 

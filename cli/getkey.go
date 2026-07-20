@@ -6,7 +6,9 @@ import (
 	"crypt/argon2id"
 )
 
-func GetKey(P argon2id.Params) ([]byte, error) {
+type cliKeyGetter string
+
+func (c cliKeyGetter) GetKey(P argon2id.Params) ([]byte, error) {
 	fmt.Println("Provide password: ")
 	s, err := term.ReadPassword(1)
 	if err != nil {

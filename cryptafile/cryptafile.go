@@ -51,6 +51,7 @@ func (C CryptData) Encrypt() error {
 		Header: argonHeader,
 		Salt: salt,
 	}
+	fmt.Println("DEBUG: keygetter: ", C.KeyGetter)
 	key, err  := C.KeyGetter.GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
