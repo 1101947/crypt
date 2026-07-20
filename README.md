@@ -11,7 +11,7 @@ git clone https://github.com/1101947/crypt.git
 ```
 ## Building:
 ``` sh
-go build -ldflags="-X 'linkvars/linkvars.isBuilt=true' -X 'main.version=v$(git show -s --format=%cd --date=iso-strict HEAD)__$(git rev-parse --short HEAD)'" -o crypt *.go
+go build -ldflags="-X 'main.IsBuilt=true' -X 'main.Version=v$(git show -s --format=%cd --date=iso-strict HEAD)__$(git rev-parse --short HEAD)'" -o crypt *.go
 ```
 ## System installation:
 Simply put generated executable "crypt" in current directory in any PATH directory of your liking, for example:

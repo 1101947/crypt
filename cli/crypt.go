@@ -3,7 +3,9 @@ package cli
 import (
 	"os"
 	"fmt"
-	"crypt/argon2id"
+	"math"
+	"strconv"
+	"crypt/header"
 	"crypt/cryptafile"
 	"github.com/1101947/cliargumentrouter/flag"
 
@@ -22,7 +24,7 @@ type EncryptHandler struct {
 func NewEncryptHandler() EncryptHandler {
 	return EncryptHandler{
 		Crypt: CryptHandler{
-			cryptData: NewCryptData(),
+			cryptData: cryptafile.NewCryptData(),
 			interactive: "false",
 		},
 	}
@@ -35,7 +37,7 @@ type DecryptHandler struct {
 func NewDecryptHandler() DecryptHandler {
 	return DecryptHandler{
 		Crypt: CryptHandler{
-			cryptData: NewCryptData(),
+			cryptData: cryptafile.NewCryptData(),
 			interactive: "false",
 		},
 	}
@@ -83,15 +85,15 @@ func (C *CryptHandler) Process(posargs []string) error {
 		return fmt.Errorf("Trying to create file, got : %w", err)
 	}
 
-	C.cryptData.in = inputRD
-	C.cryptData.out = outputWR
+	C.cryptData.In = inputRD
+	C.cryptData.Out = outputWR
 	return nil
 }
 
 func (E EncryptHandler) Process(posargs []string) error {
 	E.Crypt.Process(posargs)
-	defer E.Crypt.cryptData.in.Close()
-	defer E.Crypt.cryptData.out.Close()
+	defer E.Crypt.cryptData.In.Close()
+	defer E.Crypt.cryptData.Out.Close()
 
 	flags := flag.DefaultFlags("--", "=", posargs)
 	err := flags.Parse()
@@ -119,7 +121,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if cryptoFuncBytesCopied != len(cryptoFuncStr) {
 			return fmt.Errorf("Wrong number of bytes copied, while copying encryption fucntion name: %d . Should have been copied %d", cryptoFuncBytesCopied, header.EncryptionFunctionNameSize)
 		}
-		E.Crypt.cryptData.h.EncryptionFunction = cryptoFunc
+		E.Crypt.cryptData.H.EncryptionFunction = cryptoFunc
 	}
 	chunkSizes, ok := kwargs["chunk-size"]
 	if ok {
@@ -141,7 +143,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if chunkSize64 > math.MaxUint16 {
 			return fmt.Errorf("Your chunk-size value is too big: %d", chunkSize64)
 		}
-		E.Crypt.cryptData.h.ChunkSize = uint16(chunkSize64)
+		E.Crypt.cryptData.H.ChunkSize = uint16(chunkSize64)
 	}
 	argonIterations, ok := kwargs["argon-iteration"]
 	if ok {
@@ -160,7 +162,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonIteration64 > math.MaxUint32 {
 			return fmt.Errorf("Your argon-iteration value is too big: %d . Maximum value is: %d", argonIteration64, math.MaxUint32)
 		}
-		E.Crypt.cryptData.h.ArgonParams.Iterations= uint32(argonIteration64)
+		E.Crypt.cryptData.H.ArgonParams.Iterations= uint32(argonIteration64)
 	}
 	argonMemories, ok := kwargs["argon-memory"]
 	if ok {
@@ -179,7 +181,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonMemory64 > math.MaxUint32 {
 			return fmt.Errorf("Your argon-memory value is too big: %d . Maximum value is: %d", argonMemory64, math.MaxUint32)
 		}
-		E.Crypt.cryptData.h.ArgonParams.Memory = uint32(argonMemory64)
+		E.Crypt.cryptData.H.ArgonParams.Memory = uint32(argonMemory64)
 	}
 	argonSaltLengths, ok := kwargs["argon-salt-length"]
 	if ok {
@@ -198,7 +200,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonSaltLength64 > math.MaxUint16 {
 			return fmt.Errorf("Your argon-salt-length value is too big: %d . Maximum value is: %d", argonSaltLength64, math.MaxUint16)
 		}
-		E.Crypt.cryptData.h.ArgonParams.SaltLength= uint16(argonSaltLength64)
+		E.Crypt.cryptData.H.ArgonParams.SaltLength= uint16(argonSaltLength64)
 	}
 	argonParallelisms, ok := kwargs["argon-parallelism"]
 	if ok {
@@ -217,7 +219,7 @@ func (E EncryptHandler) Process(posargs []string) error {
 		if argonParallelism64 > math.MaxUint8 {
 			return fmt.Errorf("Your argon-parallelism value is too big: %d . Maximum value is: %d", argonParallelism64, math.MaxUint8)
 		}
-		E.Crypt.cryptData.h.ArgonParams.Parallelism = uint8(argonParallelism64)
+		E.Crypt.cryptData.H.ArgonParams.Parallelism = uint8(argonParallelism64)
 	}
 
 	// TODO: maybe put flags inside EncryptionHandler ?
@@ -230,8 +232,8 @@ func (D DecryptHandler) Process(posargs []string) error {
 	if err != nil {
 		return err
 	}
-	defer D.Crypt.cryptData.in.Close()
-	defer D.Crypt.cryptData.out.Close()
+	defer D.Crypt.cryptData.In.Close()
+	defer D.Crypt.cryptData.Out.Close()
 
 	// TODO: maybe put flags inside EncryptionHandler ?
 	err = D.Crypt.cryptData.Decrypt()

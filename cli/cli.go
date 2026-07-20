@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"crypt/version"
 	"github.com/1101947/cliargumentrouter/cmdrouter"
 )
 
@@ -70,10 +69,21 @@ func (R Router) findHandler(posargs []string) (cmdrouter.Handler, int, error) {
 	return nil, 0, fmt.Errorf("Handler for command \"%v\"  not found\n %s", posargs, GetHelpMsg())
 }
 
-func VersionCMD(posargs []string) error {
-	fmt.Println(crypt.Version)
+func NewVersionHandler(version string) versionHandler {
+	return versionHandler(version)
+}
+
+type versionHandler string
+
+func (v versionHandler) Process(posargs []string) error {
+	fmt.Println(string(v))
 	return nil
 }
+
+//func VersionCMD(posargs []string) error {
+//	fmt.Println(linkvars.Version)
+//	return nil
+//}
 
 func GetHelpMsg() string {
 	// TODO: change this help message to something usefull.

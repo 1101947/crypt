@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"fmt"
+	"golang.org/x/term"
 	"crypt/argon2id"
 )
 

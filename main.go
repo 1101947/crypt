@@ -6,13 +6,23 @@ import (
 	"crypt/cli"
 )
 
+var Version string = "NOVERSION"
+var IsBuilt string = "false"
+
 func main() {
 	router := cli.NewRouter()
-	err := router.HandleFunc([]string{"version"}, cli.VersionCMD)
+	// or router := cli.NewRouter(Version)
+	// or router.Version = Version
+	//err := router.HandleFunc([]string{"version"}, cli.VersionCMD)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	err := router.HandleFunc([]string{"help"}, cli.HelpCMD)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = router.HandleFunc([]string{"help"}, cli.HelpCMD)
+	versionHandler := cli.NewVersionHandler(Version)
+	err = router.Handle([]string{"version"}, versionHandler)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +37,7 @@ func main() {
 		log.Fatal(err)
 	}
 	args := []string{}
-	if isBuilt == "true" {
+	if IsBuilt == "true" {
 		if len(args) == 1 {
 			args = []string{}
 		} else {
