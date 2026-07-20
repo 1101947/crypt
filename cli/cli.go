@@ -7,7 +7,14 @@ import (
 	"github.com/1101947/cliargumentrouter/cmdrouter"
 )
 
-type Router map[string]cmdrouter.Handler
+//type Router map[string]cmdrouter.Handler
+
+
+// GetHelpMsg() - define on Routers, handler, flags
+type Router struct {
+	handlers map[string]cmdrouter.Handler
+	helpMsg string 
+}
 
 func NewRouter() Router {
 	return Router{}
