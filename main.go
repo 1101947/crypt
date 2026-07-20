@@ -3,27 +3,25 @@ package main
 import (
 	"log"
 	"os"
+	"crypt/cli"
 )
 
-var version string = "NOVERSION"
-var isBuilt string = "false"
-
 func main() {
-	router := NewRouter()
-	err := router.HandleFunc([]string{"version"}, VersionCMD)
+	router := cli.NewRouter()
+	err := router.HandleFunc([]string{"version"}, cli.VersionCMD)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = router.HandleFunc([]string{"help"}, HelpCMD)
+	err = router.HandleFunc([]string{"help"}, cli.HelpCMD)
 	if err != nil {
 		log.Fatal(err)
 	}
-	encryptHandler := NewEncryptHandler()
+	encryptHandler := cli.NewEncryptHandler()
 	err = router.Handle([]string{"encrypt"}, encryptHandler)
 	if err != nil {
 		log.Fatal(err)
 	}
-	decryptHandler := NewDecryptHandler()
+	decryptHandler := cli.NewDecryptHandler()
 	err = router.Handle([]string{"decrypt"}, decryptHandler)
 	if err != nil {
 		log.Fatal(err)

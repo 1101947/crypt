@@ -1,20 +1,23 @@
-package main
+package cli 
 
 import (
 	"fmt"
 	"strings"
 
+	"crypt/version"
 	"github.com/1101947/cliargumentrouter/cmdrouter"
 )
 
-//type Router map[string]cmdrouter.Handler
 
 
+// PROTOTYPES:
 // GetHelpMsg() - define on Routers, handler, flags
-type Router struct {
-	handlers map[string]cmdrouter.Handler
-	helpMsg string 
-}
+//type Router struct {
+//	handlers map[string]cmdrouter.Handler
+//	helpMsg string 
+//}
+
+type Router map[string]cmdrouter.Handler
 
 func NewRouter() Router {
 	return Router{}
@@ -68,7 +71,7 @@ func (R Router) findHandler(posargs []string) (cmdrouter.Handler, int, error) {
 }
 
 func VersionCMD(posargs []string) error {
-	fmt.Println(version)
+	fmt.Println(crypt.Version)
 	return nil
 }
 

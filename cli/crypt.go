@@ -1,5 +1,46 @@
 package cli
 
+import (
+	"os"
+	"fmt"
+	"crypt/argon2id"
+	"crypt/cryptafile"
+	"github.com/1101947/cliargumentrouter/flag"
+
+)
+
+
+type CryptHandler struct {
+	cryptData cryptafile.CryptData
+	interactive string
+}
+
+type EncryptHandler struct {
+	Crypt CryptHandler 
+}
+
+func NewEncryptHandler() EncryptHandler {
+	return EncryptHandler{
+		Crypt: CryptHandler{
+			cryptData: NewCryptData(),
+			interactive: "false",
+		},
+	}
+}
+
+type DecryptHandler struct {
+	Crypt CryptHandler 
+}
+
+func NewDecryptHandler() DecryptHandler {
+	return DecryptHandler{
+		Crypt: CryptHandler{
+			cryptData: NewCryptData(),
+			interactive: "false",
+		},
+	}
+}
+
 func (C *CryptHandler) Process(posargs []string) error {
 	flags := flag.DefaultFlags("--", "=", posargs)
 	err := flags.Parse()
