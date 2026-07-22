@@ -31,6 +31,14 @@ crypt decrypt --input="path-to-the-encrypted-file" --output="path-to-the-decrypt
 # License
 This project is licensed uder GPLv3, for more information see LICENSE.txt
 
+# Changelog
+This project uses changelog file(see CHANGELOG.md).
+Changelog file contains log of changes for each project version(see version section).
+It allows users and developers to see what changes have been made in new version, what features have been added and if any bugs or security vulnerabilities was introduced or fixed.
+Format was inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Unlike keepachangelog.com current version is tagged "current" and don't have a proper version string like all previous versions, we don't use semver(see versioning section), we have additional Bug-introduced and Bug-found types of changes.
+
+
 # TODO:
 - store hmac/aead in header to verify it(header) and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
 - add size check(check for number of numbers that chunkPosition can hold, safe amount of data you can encrypt with different nonces and same key for aes256gcm and chacha20poly1305)
