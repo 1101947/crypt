@@ -36,7 +36,7 @@ This project uses changelog file(see CHANGELOG.md).
 Changelog file contains log of changes for each project version(see version section).
 It allows users and developers to see what changes have been made in new version, what features have been added and if any bugs or security vulnerabilities was introduced or fixed.
 Format was inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Unlike keepachangelog.com current version is tagged "current" and don't have a proper version string like all previous versions, we don't use semver(see versioning section), we have additional Bug-introduced and Bug-found types of changes.
+Unlike Keep a Changelog, current version is tagged "current" and don't have a proper version string like all previous versions, we don't use [semver](https://semver.org/spec/v2.0.0.html)(see versioning section), we have additional Bug-introduced and Bug-found types of changes.
 
 # Versioning
 This project adheres to so called(by us) commitver: commit versioning scheme.
@@ -50,7 +50,39 @@ To see semantics, added features, introduced and fixed bugs of any version addre
 - Refactor versioning section.
 - store hmac/aead in header to verify it(header) and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
 - add size check(check for number of numbers that chunkPosition can hold, safe amount of data you can encrypt with different nonces and same key for aes256gcm and chacha20poly1305)
-- add verification function/method for header and cryptData(crypt.go)
 - add option to enable progress bar while en/decrypting
 - add tests, try to decrypted tampered files, try to change header bytes and random bytes, see how decryption will go.
-- add Verify for argon header. KeyLen must be 32 byte long for both aes256gcm and chacha20poly1305. Remove user flag for setting key length.
+- Add description of file format
+- Add option for automaticly generating encrypted files with file format extension(like .enc or .crt or .crpt)(option is disabled by default)
+- add CONTRIBUTING.md
+- add SECURITY.md
+- add canary warrant
+- add progress bar
+- interactive mode(enter function you want to encrypt file with: \<aes/chacha\>:)
+- shell autocompletion
+- add function: header dumper
+- add function: partial/query crypter(decrypt only 1 3 52 chunks, mb latter when will have extended format with table)
+- add function: reencrypter(to reencrypt without decrypting and having decrypted file just laying around on disk, free to see for everyone) 
+- add: stdio encryption 
+- add: getting and passing files via ipc(unix domain socket with fd(sock_setqpacket) passing, creation of in-memory file and passing its descriptor( memfd_create + scm_rights), pipes)
+- add: extended format with table(or merkle tree) at the end(like zip)(will allow to store chunks metadata and use it for managing passowrd or other uses)
+- add: deniable encryption
+- add: totp
+- add: one time pad
+- set up exit codes
+- add: ability to seat units for bytes sizes(64KB, 1MB) and use arithmetics(--memory=1024\*1024kb)
+- shorten --input and --output flags to --in and --out
+- Shorten crypt encrypt and crypt decrypt to:
+    crypt en 
+    crypt de
+- Different variants for passing required arguments:
+    crypt en --input=f.txt --output=f.enc
+    Or 
+    crypt en f.txt f.en
+- Cli parsing:
+    - error if unknow flag
+    - parsing: flag have method Parse(kwargs) which may consist of choosing one of may flag based on following strateges: kwargs.OnlyOne() , kwargs.First(), kwargs.Last(), then just parse string -> needed_type
+- add Documentation:
+    - generate help messages
+    - generate documentation for users and developers
+    - add help command that will query and print documentation 

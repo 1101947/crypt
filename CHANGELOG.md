@@ -8,6 +8,9 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 
 ## [Unreleased]
 ## [Current]
+- Added new TODO entries in README.md
+- Fixed some things in Changelog section in README.md
+## [v2026-07-22_19-59-25Z__af165cf99aad5392377bb76d71d406b2bf9a75eb]
 ### Added
 - new section "Versioning" in README.md
 ## [v2026-07-22_19-20-40Z__65d0b8da6f4e767ffdfaefa3a7f79e5b9665db77]
