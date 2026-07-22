@@ -8,6 +8,9 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 
 ## [Unreleased]
 ## [Current]
+### Added
+- new section "Versioning" in README.md
+## [v2026-07-22_19-20-40Z__65d0b8da6f4e767ffdfaefa3a7f79e5b9665db77]
 ### Fixed
 - cleaned README.md up
 - updated run.txt
