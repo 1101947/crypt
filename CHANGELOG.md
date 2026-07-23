@@ -8,8 +8,13 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 
 ## [Unreleased]
 ## [Current]
-- Added new TODO entries in README.md
-- Fixed some things in Changelog section in README.md
+### Added
+- Tests for cryptafile
+## [v2026-07-22_21-00-06Z__65c57e08f1244bcc355702afccb22534fa3d883b]
+### Added
+- New TODO entries in README.md
+### Fixed
+- Some things in Changelog section in README.md
 ## [v2026-07-22_19-59-25Z__af165cf99aad5392377bb76d71d406b2bf9a75eb]
 ### Added
 - new section "Versioning" in README.md
