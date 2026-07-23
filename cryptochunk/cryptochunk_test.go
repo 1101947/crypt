@@ -41,6 +41,7 @@ func TestCryptoChunkAes256Gcm(t *testing.T) {
 
 
 func TestCryptoChunkChaCha20Poly1305(t *testing.T) {
+	// Dont use magick number, replace with argon2id.ArgonHeader.KeyLength
 	key := make([]byte, 32)
 	i, err := rand.Read(key)
 	if err != nil {

@@ -4,25 +4,36 @@ import (
 	"testing"
 	"os"
 	"fmt"
-	"math/rand"
+	"strings"
+	"crypto/rand"
+	"crypto/sha256"
+
+	"crypt/argon2id"
 )
 
-func getFilePath(s string) string {
+func getFilePath(s string) (string, error) {
 	var projectName string = "crypt"
 	var sep string = "/"
-	pwd = strings.Split(os.Getwd(), "/")
-	filepath := ".test__" + s
-	for i:=len(pwd);i>=0;i-- {
-		if pwd[i] == projectName {
-			filepath = strings.Join(pwd[:i], sep) + filepath
+	pwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("Getting pwd, got: %w", err) 
+	}
+	sPwd := strings.Split(pwd, "/")
+	filepath := "/.test__/" + ".test__" + s
+	for i:=len(sPwd)-1;i>=0;i-- {
+		if sPwd[i] == projectName {
+			filepath = strings.Join(sPwd[:i+1], sep) + filepath
 			break
 		}
 	}
-	return filepath
+	return filepath, nil
 }
 
 func createTestFileToEncrypt(buffSize, iterations int) (*os.File, error) {
-	filepath := getFilePath("orig")
+	filepath, err := getFilePath("orig")
+	if err != nil {
+		return nil, fmt.Errorf("Getting filepath, got: %w", err)
+	}
 	fl, err := os.Create(filepath)
 	if err != nil {
 		return fl, fmt.Errorf("Creating file, got: %w", err)
@@ -34,14 +45,14 @@ func createTestFileToEncrypt(buffSize, iterations int) (*os.File, error) {
 			return fl, fmt.Errorf("Reading random bytes into buffer, got %w", err)
 		}
 		if n != len(randomBuff) {
-			return fl, fmt.Errorf("Wrote invalid number of random bytes: %d, should have been writen: %d", n, len(randomBuff))
+			return fl, fmt.Errorf("Wrote invalid number of random bytes: %d, should have writen: %d", n, len(randomBuff))
 		}
 		fl.Write(randomBuff)
 	} 
 	return fl, nil
 }
 
-func compareFiles(size, amount int, orig, decr *os.File) bool {
+func compareFiles(size, amount int, orig, decr *os.File) (bool, error) {
 	origBuff := make([]byte, size)
 	decrBuff := make([]byte, size)
 	origSha := sha256.New()
@@ -67,7 +78,7 @@ func compareFiles(size, amount int, orig, decr *os.File) bool {
 		decrSha.Write(decrBuff)
 		origSum = origSha.Sum(nil)
 		decrSum = origSha.Sum(nil)
-		if origSum != decrSum {
+		if string(origSum) != string(decrSum) {
 			return false, nil
 		}
 	}
@@ -76,25 +87,89 @@ func compareFiles(size, amount int, orig, decr *os.File) bool {
 }
 
 func TestNormalCrypt(t *testing.T) {
-	fl, err := createTestFileToEncrypt(1024, 4)
+	var size int = 1024
+	var amount int = 4
+	origFl, err := createTestFileToEncrypt(size, amount)
+	defer origFl.Close()
 	if err != nil {
-		fl.Close()
-		t.Errorf(err)
+		t.Errorf("ERROR: %s", err.Error())
 	}
-	defer fl.Close()
-	err = c.Encrypt()
+	encFlPath, err := getFilePath("enc")
 	if err != nil {
-		t.Errorf(err)
+		t.Errorf("ERROR: %s", err.Error())
 	}
-	err = c.Decrypt()
+	encFl, err := os.Create(encFlPath)
+	defer encFl.Close()
 	if err != nil {
-		t.Errorf(err)
+		t.Errorf("ERROR: %s", err.Error())
 	}
-	encFl, err := os.Create(getFileName("enc"))
+	cr := NewCryptData()
+	//
+	cr.Salt, err = argon2id.GetSalt(cr.H.ArgonParams.SaltLength) 
 	if err != nil {
-		encFl.Close()
-		t.Errorf(err)
+		t.Errorf("ERROR: %s", err.Error())
 	}
+	//tk := tKeyGetter{}
+	arg := argon2id.Params{
+		Header: cr.H.ArgonParams,
+		Salt: cr.Salt,
+	}
+	gtr, err := getKeyGetter(arg)
+	if err != nil {
+		t.Errorf("ERROR: %s", err.Error())
+	}
+	cr.KeyGetter = gtr 
 
+	cr.In = origFl
+	cr.Out = encFl
+	err = cr.Encrypt()
+	if err != nil {
+		t.Errorf("ERROR: %s", err.Error())
+	}
+	decFlPath, err := getFilePath("dec")
+	if err != nil {
+		t.Errorf("ERROR: %s", err.Error())
+	}
+	decFl, err := os.Create(decFlPath)
+	defer decFl.Close()
+	if err != nil {
+		t.Errorf("ERROR: %s", err.Error())
+	}
+	cr.In = cr.Out
+	cr.Out = decFl
+	err = cr.Decrypt()
+	if err != nil {
+		t.Errorf("ERROR: %s", err.Error())
+	}
+	isEq, err := compareFiles(size, amount, origFl, decFl)
+	if err != nil {
+		t.Errorf("ERROR: %s", err.Error())
+	}
+	if !isEq {
+		t.Errorf("Decrypted file differs from orginal!")
+	}
+}
 
+type tKeyGetter struct {
+	b []byte
+}
+
+func (t tKeyGetter) GetKey(a argon2id.Params) ([]byte, error) {
+	return t.b, nil
+}
+
+func getKeyGetter(a argon2id.Params) (tKeyGetter, error) {
+	userKey := make([]byte, a.Header.KeyLength)
+	i, err := rand.Read(userKey)
+	if i != len(userKey) {
+		return tKeyGetter{}, fmt.Errorf("Read invalid number of random bytes: %d , should have read: %d", i, len(userKey)) 
+	}
+	key, err := a.Hash(userKey)
+	if err != nil {
+		return tKeyGetter{}, fmt.Errorf("Hashing, got: %w", err)
+	}
+	if len(key) != 32 {
+		return tKeyGetter{}, fmt.Errorf("Invalid key length: %d", len(key))
+	}
+	return tKeyGetter{ b: key, }, nil
 }
