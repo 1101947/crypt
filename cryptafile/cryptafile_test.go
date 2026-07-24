@@ -150,6 +150,8 @@ func TestNormalCrypt(t *testing.T) {
 	}
 
 	cr = NewCryptData()
+
+	encFl.Seek(0, 0)
 	cr.In = encFl 
 	cr.Out = decFl
 	cr.KeyGetter = gtr 
@@ -157,6 +159,9 @@ func TestNormalCrypt(t *testing.T) {
 	if err != nil {
 		t.Fatal("ERROR: decrypting, got: ", err.Error())
 	}
+
+	decFl.Seek(0, 0)
+	origFl.Seek(0, 0)
 	isEq, err := compareFiles(size, amount, origFl, decFl)
 	if err != nil {
 		t.Fatal("ERROR: comparing two files, got: ", err.Error())
