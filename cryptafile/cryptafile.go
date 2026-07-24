@@ -51,7 +51,6 @@ func (C CryptData) Encrypt() error {
 		Header: argonHeader,
 		Salt: salt,
 	}
-	fmt.Println("DEBUG: keygetter: ", C.KeyGetter)
 	key, err  := C.KeyGetter.GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
@@ -224,7 +223,8 @@ func (C CryptData) Decrypt() error {
 		return fmt.Errorf("Reading header from file to buffer, got: %w", err)
 	}
 	if readIntoHeaderBuf != len(headerBuf) {
-		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", len(headerBuf), readIntoHeaderBuf)
+		// TODO: have been read typo ?
+		return fmt.Errorf("Read wrong number of bytes to header. Must have been read %d bytes, but actualy read %d .", len(headerBuf), readIntoHeaderBuf)
 	}
 	C.H.Decode(&headerBuf)
 	err = C.H.Verify()
