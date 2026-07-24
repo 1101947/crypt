@@ -51,7 +51,6 @@ func (C CryptData) Encrypt() error {
 		Header: argonHeader,
 		Salt: salt,
 	}
-	fmt.Println("DEBUG: keygetter: ", C.KeyGetter)
 	key, err  := C.KeyGetter.GetKey(argonParams)
 	if err != nil {
 		return fmt.Errorf("Geting key from user, got: %w", err)
@@ -135,7 +134,6 @@ func (C CryptData) Encrypt() error {
 	if nonceBytesWriten != len(C.Cr.NonceSource) {
 		return fmt.Errorf("Number of bytes writen: %d differs from the amount of bytes in C.Cr.NonceSource: %d", nonceBytesWriten, len(C.Cr.NonceSource))
 	}
-	fmt.Printf("DEBUG: noncesourcelen: %d , saltlen: %d\n", len(C.Cr.NonceSource), len(C.Salt))
 
 	// cryptBuf and plainBuf are just cr.Out and cr.In
 	// TODO:
@@ -146,16 +144,12 @@ func (C CryptData) Encrypt() error {
 	var readIntoPlain int
 	var writeToOut int
 
-	fmt.Println("DEBUG: Hiiiiii")
-	fmt.Printf("DEBUG: header: %v cryptochunk: %v \n", C.H, C.Cr)
 	for {
 		readIntoPlain, err = io.ReadFull(C.In, C.Cr.In)
 		if err == io.ErrUnexpectedEOF {
-			fmt.Printf("DEBUG: unexpected EOF, chunks amount: %d\n", chunksAmount)
 			break
 		}
 		if err == io.EOF {
-			fmt.Printf("DEBUG: EOF, chunks amount: %d , C.In: %v , C.Cr.In: %v \n", chunksAmount, C.In, C.Cr.In)
 			break
 		}
 		if err != nil {

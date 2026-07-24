@@ -96,17 +96,6 @@ func TestNormalCrypt(t *testing.T) {
 	if err != nil {
 		t.Fatal("ERROR: creating original file, got: ", err.Error())
 	}
-	// DEBUG:
-//	origFlBuff := make([]byte, 1024)
-//	nNn, err := io.ReadFull(origFl, origFlBuff)
-//	if err != nil {
-//		t.Fatal("ERROR: reading from orginial file to buffer, got: ", err)
-//	}
-//	if nNn != len(origFlBuff) {
-//		t.Fatal("ERROR: read invalid number of bytes: ", nNn, "expected to read: ", len(origFlBuff))
-//	}
-//	t.Fatal("No error found")
-	// END OF DEBUG
 	encFlPath, err := getFilePath("enc")
 	if err != nil {
 		t.Fatal("ERROR: getting file path for encrypted file, got: ", err.Error())
