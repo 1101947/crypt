@@ -47,6 +47,8 @@ Every commit in master branch should contain working code, but to be sure always
 To see semantics, added features, introduced and fixed bugs of any version address to CHANGELOG.md.
 
 # TODO:
+- Consider safe feature: allow to set file offset for C.In in cryptofile.(En/De)crypt function. The problem is that if you have writen to \*os.File and then try to read, you will get EOF, because \*os.File offset is equal to filesize and when you start reading it will start reading from the end, obviously will read 0 bytes and will return EOF. So in order to prevent or control this standard behavior default offset will be set to 0 and before reading file Seek(offset(which is 0 by default), 0) will be performed. 
+- Test against end of file(in chunk, salt, nonce).
 - Refactor versioning section.
 - store hmac/aead in header to verify it(header) and optionaly allow user to use securely stored version to protect from replay attack(replace valid encrypted file with another version of valid encrypted file) 
 - add size check(check for number of numbers that chunkPosition can hold, safe amount of data you can encrypt with different nonces and same key for aes256gcm and chacha20poly1305)

@@ -2,6 +2,7 @@ package cryptafile
 
 import (
 	"testing"
+
 	"os"
 	"fmt"
 	"strings"
@@ -39,7 +40,7 @@ func createTestFileToEncrypt(buffSize, iterations int) (*os.File, error) {
 		return fl, fmt.Errorf("Creating file, got: %w", err)
 	}
 	randomBuff := make([]byte, buffSize)
-	for i:=0;i<=iterations;i++ {
+	for i:=0;i<iterations;i++ {
 		n, err := rand.Read(randomBuff)
 		if err != nil {
 			return fl, fmt.Errorf("Reading random bytes into buffer, got %w", err)
@@ -49,6 +50,7 @@ func createTestFileToEncrypt(buffSize, iterations int) (*os.File, error) {
 		}
 		fl.Write(randomBuff)
 	} 
+	fl.Seek(0, 0)
 	return fl, nil
 }
 
@@ -59,7 +61,7 @@ func compareFiles(size, amount int, orig, decr *os.File) (bool, error) {
 	decrSha := sha256.New()
 	var origSum []byte
 	var decrSum []byte
-	for i:=0;i<=amount;i++ {
+	for i:=0;i<amount;i++ {
 		nR, err := orig.Read(origBuff)
 		if err != nil {
 			return false, fmt.Errorf("Reading bytes to buffer, got: %w", err)
@@ -92,22 +94,33 @@ func TestNormalCrypt(t *testing.T) {
 	origFl, err := createTestFileToEncrypt(size, amount)
 	defer origFl.Close()
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: creating original file, got: ", err.Error())
 	}
+	// DEBUG:
+//	origFlBuff := make([]byte, 1024)
+//	nNn, err := io.ReadFull(origFl, origFlBuff)
+//	if err != nil {
+//		t.Fatal("ERROR: reading from orginial file to buffer, got: ", err)
+//	}
+//	if nNn != len(origFlBuff) {
+//		t.Fatal("ERROR: read invalid number of bytes: ", nNn, "expected to read: ", len(origFlBuff))
+//	}
+//	t.Fatal("No error found")
+	// END OF DEBUG
 	encFlPath, err := getFilePath("enc")
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: getting file path for encrypted file, got: ", err.Error())
 	}
 	encFl, err := os.Create(encFlPath)
 	defer encFl.Close()
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: creating encrypted file, got: ", err.Error())
 	}
 	cr := NewCryptData()
 	//
 	cr.Salt, err = argon2id.GetSalt(cr.H.ArgonParams.SaltLength) 
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Errorf("ERROR: getting salt, got: %s", err.Error())
 	}
 	//tk := tKeyGetter{}
 	arg := argon2id.Params{
@@ -116,7 +129,7 @@ func TestNormalCrypt(t *testing.T) {
 	}
 	gtr, err := getKeyGetter(arg)
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: getting key getter, got: ", err.Error())
 	}
 	cr.KeyGetter = gtr 
 
@@ -124,26 +137,29 @@ func TestNormalCrypt(t *testing.T) {
 	cr.Out = encFl
 	err = cr.Encrypt()
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: Encrypting, got: ", err.Error())
 	}
 	decFlPath, err := getFilePath("dec")
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: getting file path for the decrypted file, got: ", err.Error())
 	}
 	decFl, err := os.Create(decFlPath)
 	defer decFl.Close()
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: creatng decrypted file, got: ", err.Error())
 	}
-	cr.In = cr.Out
+
+	cr = NewCryptData()
+	cr.In = encFl 
 	cr.Out = decFl
+	cr.KeyGetter = gtr 
 	err = cr.Decrypt()
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: decrypting, got: ", err.Error())
 	}
 	isEq, err := compareFiles(size, amount, origFl, decFl)
 	if err != nil {
-		t.Errorf("ERROR: %s", err.Error())
+		t.Fatal("ERROR: comparing two files, got: ", err.Error())
 	}
 	if !isEq {
 		t.Errorf("Decrypted file differs from orginal!")

@@ -60,9 +60,6 @@ func (F FileHeader) Verify() error {
 		return fmt.Errorf("Invalid magic.")
 	}
 	// TODO: consider adding check for version
-	if !F.IsValid {
-		return errSetToInvalidHeader 
-	} 
 	cryptFunc := string(F.EncryptionFunction[:])
 	if (cryptFunc[:9] != EncFuncAes) && (cryptFunc != EncFuncChaCha) {
 		return fmt.Errorf("Invalid encryption function: %s . Must be either %s or %s .", cryptFunc, EncFuncAes, EncFuncChaCha)
@@ -76,8 +73,14 @@ func (F FileHeader) Verify() error {
 	if F.Overhead == 0 {
 		return fmt.Errorf("Overhead is set to zero. It must always be greater than zero")
 	}
-	return F.ArgonParams.Verify()
-
+	err := F.ArgonParams.Verify()
+	if err != nil {
+		return fmt.Errorf("Verifying argon2id header, got: %w", err)
+	}
+	if !F.IsValid {
+		return errSetToInvalidHeader 
+	} 
+	return nil
 }
 
 func Compare(h1, h2 FileHeader) string {

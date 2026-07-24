@@ -10,6 +10,7 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 ## [Current]
 ### Added
 - Tests for cryptafile
+- Entry in TODO list in README.md
 ## [v2026-07-22_21-00-06Z__65c57e08f1244bcc355702afccb22534fa3d883b]
 ### Added
 - New TODO entries in README.md

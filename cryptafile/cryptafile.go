@@ -135,6 +135,7 @@ func (C CryptData) Encrypt() error {
 	if nonceBytesWriten != len(C.Cr.NonceSource) {
 		return fmt.Errorf("Number of bytes writen: %d differs from the amount of bytes in C.Cr.NonceSource: %d", nonceBytesWriten, len(C.Cr.NonceSource))
 	}
+	fmt.Printf("DEBUG: noncesourcelen: %d , saltlen: %d\n", len(C.Cr.NonceSource), len(C.Salt))
 
 	// cryptBuf and plainBuf are just cr.Out and cr.In
 	// TODO:
@@ -145,12 +146,16 @@ func (C CryptData) Encrypt() error {
 	var readIntoPlain int
 	var writeToOut int
 
+	fmt.Println("DEBUG: Hiiiiii")
+	fmt.Printf("DEBUG: header: %v cryptochunk: %v \n", C.H, C.Cr)
 	for {
 		readIntoPlain, err = io.ReadFull(C.In, C.Cr.In)
 		if err == io.ErrUnexpectedEOF {
+			fmt.Printf("DEBUG: unexpected EOF, chunks amount: %d\n", chunksAmount)
 			break
 		}
 		if err == io.EOF {
+			fmt.Printf("DEBUG: EOF, chunks amount: %d , C.In: %v , C.Cr.In: %v \n", chunksAmount, C.In, C.Cr.In)
 			break
 		}
 		if err != nil {
@@ -224,7 +229,8 @@ func (C CryptData) Decrypt() error {
 		return fmt.Errorf("Reading header from file to buffer, got: %w", err)
 	}
 	if readIntoHeaderBuf != len(headerBuf) {
-		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", len(headerBuf), readIntoHeaderBuf)
+		// TODO: have been read typo ?
+		return fmt.Errorf("Read wrong number of bytes to header. Must have been read %d bytes, but actualy read %d .", len(headerBuf), readIntoHeaderBuf)
 	}
 	C.H.Decode(&headerBuf)
 	err = C.H.Verify()

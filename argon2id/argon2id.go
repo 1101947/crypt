@@ -169,6 +169,8 @@ func GetSalt(saltLen uint16) ([]byte, error) {
 		return nil, fmt.Errorf("Reading random bytes, got: %w", err)
 	}
 	if i != int(saltLen) {
+		fmt.Println("DEBUG: HEREE!")
+		// TODO: typo ?
 		return nil, fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes , but read %d bytes.", saltLen, i)
 	}
 	return key, nil
