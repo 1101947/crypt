@@ -10,3 +10,5 @@ require (
 )
 
 require golang.org/x/sys v0.35.0 // indirect
+
+replace github.com/1101947/cliargumentrouter => ../cliargumentrouter

@@ -47,6 +47,7 @@ Every commit in master branch should contain working code, but to be sure always
 To see semantics, added features, introduced and fixed bugs of any version address to CHANGELOG.md.
 
 # TODO:
+- cli args handling: if no output option is specified, output for encrypt command will be input filename + .crpt extension, for decrypt probably printing to stdout, but need to think about how secure it is.(creating file with the same name as encrypted , but without .crpt extension is also an option, but what if encrypted file doesnt have .crpt extension or have anouther ?)
 - Think about offset handling when reading/writing files. Consider safe feature: allow to set file offset for C.In in cryptofile.(En/De)crypt function. The problem is that if you have writen to \*os.File and then try to read, you will get EOF, because \*os.File offset is equal to filesize and when you start reading it will start reading from the end, obviously will read 0 bytes and will return EOF. So in order to prevent or control this standard behavior default offset will be set to 0 and before reading file Seek(offset(which is 0 by default), 0) will be performed. Should we check offset to be 0 before reading/writing or should we allow to specify offset explicitly and perform seeking ?
 - Test against end of file(in chunk, salt, nonce).
 - Refactor versioning section.

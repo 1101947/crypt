@@ -46,9 +46,13 @@ func main() {
 	} else {
 		args = os.Args[2:]
 	}
-	err = router.Process(args)
+	cmd, err := router.Process(args)
 	if err != nil {
-		log.Fatal("ERROR: ", err)
+		log.Fatal("ERROR: getting command from router", err)
+	}
+	err = cmd.Exec()
+	if err != nil {
+		log.Fatal("ERROR: executing command: ", err)
 	}
 	os.Exit(0)
 }

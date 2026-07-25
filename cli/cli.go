@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/1101947/cliargumentrouter/cmdrouter"
+	"github.com/1101947/cliargumentrouter/cmd"
 )
 
 
@@ -41,21 +42,23 @@ func (R Router) HandleFunc(path []string, fn cmdrouter.ProcesserFunc) error {
 }
 
 
-func (R Router) Process(posargs []string) error {
+func (R Router) Process(posargs []string) (cmd.Cmd, error) {
 	if len(posargs) == 0 {
-		fmt.Println(GetHelpMsg())
-		return nil
+		hlpMsg := GetHelpMsg()
+		// TODO: should i return error here ? Invalid cliargs string should be considered error.
+		// HERE
+		return hlpMsg, nil 
 	}
 	h, foundOn, err := R.findHandler(posargs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	posargs = posargs[foundOn:]
-	err = h.Process(posargs)
+	cmnd, err := h.Process(posargs)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return cmnd, nil
 }
 
 func (R Router) findHandler(posargs []string) (cmdrouter.Handler, int, error) {
@@ -75,9 +78,13 @@ func NewVersionHandler(version string) versionHandler {
 
 type versionHandler string
 
-func (v versionHandler) Process(posargs []string) error {
-	fmt.Println(string(v))
-	return nil
+func (v versionHandler) Exec() error {
+	_, err := fmt.Println(string(v))
+	return err 
+}
+
+func (v versionHandler) Process(posargs []string) (cmd.Cmd, error) {
+	return v, nil
 }
 
 //func VersionCMD(posargs []string) error {
@@ -85,13 +92,21 @@ func (v versionHandler) Process(posargs []string) error {
 //	return nil
 //}
 
-func GetHelpMsg() string {
+
+func GetHelpMsg() helpMsg {
 	// TODO: change this help message to something usefull.
-	helpMsg := "UNDER CONSTRUCTION. This help message needs changing."
+	helpMsg := helpMsg("UNDER CONSTRUCTION. This help message needs changing.")
 	return helpMsg 
 }
 
-func HelpCMD(posargs []string) error {
-	fmt.Println(GetHelpMsg())
-	return nil
+type helpMsg string
+func (h helpMsg) Exec() error {
+	_, err := fmt.Println(h)
+	return err
+}
+
+
+func HelpCMD(posargs []string) (cmd.Cmd, error) {
+	helpMsg := GetHelpMsg()
+	return helpMsg, nil
 }
