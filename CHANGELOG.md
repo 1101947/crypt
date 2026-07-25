@@ -9,7 +9,7 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 ## [Unreleased]
 ## [Current]
 ### Changed
-- cmdrouter API(function calls from cmdrouter lib)
+- cmdrouter API(function calls from cmdrouter lib). Added Cmd type that implements Exec() error method, now Handler.Process() method doesn't run commands code itself, but returns Cmd type that allows delayed execution after all the neccessary preparations(parsing files, geting envvars).
 ### Added
 - new TODO entries in README.md
 ## [v2026-07-24_13-33-58Z__553300ad1bd3859527cfc05c2c49422238c3fe33]
