@@ -22,6 +22,8 @@ type EncryptHandler struct {
 }
 
 func (E EncryptHandler) Exec() error {
+	defer E.Crypt.cryptData.In.Close()
+	defer E.Crypt.cryptData.Out.Close()
 	return E.Crypt.cryptData.Encrypt()
 }
 
@@ -39,6 +41,8 @@ type DecryptHandler struct {
 }
 
 func (D DecryptHandler) Exec() error {
+	defer D.Crypt.cryptData.In.Close()
+	defer D.Crypt.cryptData.Out.Close()
 	return D.Crypt.cryptData.Decrypt()
 }
 
@@ -101,8 +105,6 @@ func (C *CryptHandler) Process(posargs []string) error {
 
 func (E EncryptHandler) Process(posargs []string) (cmd.Cmd, error) {
 	E.Crypt.Process(posargs)
-	defer E.Crypt.cryptData.In.Close()
-	defer E.Crypt.cryptData.Out.Close()
 
 	flags := flag.DefaultFlags("--", "=", posargs)
 	err := flags.Parse()
@@ -241,10 +243,6 @@ func (D DecryptHandler) Process(posargs []string) (cmd.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: decide what to do with defers
-	defer D.Crypt.cryptData.In.Close()
-	defer D.Crypt.cryptData.Out.Close()
-
 	// TODO: maybe put flags inside EncryptionHandler ?
 	return D, nil 
 }
