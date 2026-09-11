@@ -1,3 +1,0 @@
-go run -ldflags="-X 'main.Version=v$(date -d "$(git show -s --format=%cI --date=iso-strict HEAD)" -u +"%Y-%m-%d_%H-%M-%SZ")__$(git rev-parse HEAD)'" . ./main.go
-
-go build -ldflags="-X 'main.IsBuilt=true' -X 'main.Version=v$(date -d "$(git show -s --format=%cI --date=iso-strict HEAD)" -u +"%Y-%m-%d_%H-%M-%SZ")__$(git rev-parse HEAD)'" -o crypt *.go

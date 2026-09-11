@@ -9,6 +9,11 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 ## [Unreleased]
 ## [Current]
 ### Changed
+- moved main.go to cmd/main.go
+
+
+## [Current]
+### Changed
 - cmdrouter API(function calls from cmdrouter lib). Added Cmd type that implements Exec() error method, now Handler.Process() method doesn't run commands code itself, but returns Cmd type that allows delayed execution after all the neccessary preparations(parsing files, geting envvars).
 ### Added
 - new TODO entries in README.md

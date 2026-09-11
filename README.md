@@ -1,5 +1,5 @@
 # Crypt
-is a simple encryption utility.
+is a simple encryption library for crypt file format.
 
 # Notice
 Not production ready !
@@ -9,25 +9,7 @@ Not production ready !
 ``` sh
 git clone https://github.com/1101947/crypt.git
 ```
-## Building:
-``` sh
-go build -ldflags="-X 'main.IsBuilt=true' -X 'main.Version=v$(date -d "$(git show -s --format=%cI --date=iso-strict HEAD)" -u +"%Y-%m-%d_%H-%M-%SZ")__$(git rev-parse HEAD)'" -o crypt *.go
-```
-## System installation:
-Simply put generated executable "crypt" in current directory in any PATH directory of your liking, for example:
-``` sh
-cp crypt ~/.local/bin/crypt
-```
 
-# Usage
-To encrypt file, run:
-``` sh
-crypt encrypt --input="path-to-the-file-to-encrypt" --output="path-to-the-encrypted-file"
-```
-To decrypt file, run:
-``` sh
-crypt decrypt --input="path-to-the-encrypted-file" --output="path-to-the-decrypted-file"
-```
 # License
 This project is licensed uder GPLv3, for more information see LICENSE.txt
 
@@ -47,7 +29,6 @@ Every commit in master branch should contain working code, but to be sure always
 To see semantics, added features, introduced and fixed bugs of any version address to CHANGELOG.md.
 
 # TODO:
-- cli args handling: if no output option is specified, output for encrypt command will be input filename + .crpt extension, for decrypt probably printing to stdout, but need to think about how secure it is.(creating file with the same name as encrypted , but without .crpt extension is also an option, but what if encrypted file doesnt have .crpt extension or have anouther ?)
 - Think about offset handling when reading/writing files. Consider safe feature: allow to set file offset for C.In in cryptofile.(En/De)crypt function. The problem is that if you have writen to \*os.File and then try to read, you will get EOF, because \*os.File offset is equal to filesize and when you start reading it will start reading from the end, obviously will read 0 bytes and will return EOF. So in order to prevent or control this standard behavior default offset will be set to 0 and before reading file Seek(offset(which is 0 by default), 0) will be performed. Should we check offset to be 0 before reading/writing or should we allow to specify offset explicitly and perform seeking ?
 - Test against end of file(in chunk, salt, nonce).
 - Refactor versioning section.
@@ -56,13 +37,10 @@ To see semantics, added features, introduced and fixed bugs of any version addre
 - add option to enable progress bar while en/decrypting
 - add tests, try to decrypted tampered files, try to change header bytes and random bytes, see how decryption will go.
 - Add description of file format
-- Add option for automaticly generating encrypted files with file format extension(like .enc or .crt or .crpt)(option is disabled by default)
 - add CONTRIBUTING.md
 - add SECURITY.md
 - add canary warrant
 - add progress bar
-- interactive mode(enter function you want to encrypt file with: \<aes/chacha\>:)
-- shell autocompletion
 - add function: header dumper
 - add function: partial/query crypter(decrypt only 1 3 52 chunks, mb latter when will have extended format with table)
 - add function: reencrypter(to reencrypt without decrypting and having decrypted file just laying around on disk, free to see for everyone) 
@@ -74,17 +52,6 @@ To see semantics, added features, introduced and fixed bugs of any version addre
 - add: one time pad
 - set up exit codes
 - add: ability to seat units for bytes sizes(64KB, 1MB) and use arithmetics(--memory=1024\*1024kb)
-- shorten --input and --output flags to --in and --out
-- Shorten crypt encrypt and crypt decrypt to:
-    crypt en 
-    crypt de
-- Different variants for passing required arguments:
-    crypt en --input=f.txt --output=f.enc
-    Or 
-    crypt en f.txt f.en
-- Cli parsing:
-    - error if unknow flag
-    - parsing: flag have method Parse(kwargs) which may consist of choosing one of may flag based on following strateges: kwargs.OnlyOne() , kwargs.First(), kwargs.Last(), then just parse string -> needed_type
 - add Documentation:
     - generate help messages
     - generate documentation for users and developers
