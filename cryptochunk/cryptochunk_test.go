@@ -3,8 +3,8 @@ package cryptochunk
 import (
 	"testing"
 	"crypto/rand"
-	"crypt/aes256gcm"
-	"crypt/chacha20poly1305"
+	"github.com/1101947/crypt/aes256gcm"
+	"github.com/1101947/crypt/chacha20poly1305"
 )
 
 func TestCryptoChunkAes256Gcm(t *testing.T) {

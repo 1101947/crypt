@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"errors"
 	"encoding/binary"
-	"crypt/argon2id"
+	"github.com/1101947/crypt/argon2id"
 )
 
 const Magic = "CRPT" 

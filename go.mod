@@ -1,4 +1,4 @@
-module crypt
+module github.com/1101947/crypt
 
 go 1.25.6
 

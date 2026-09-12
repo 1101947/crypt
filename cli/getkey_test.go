@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 	
-	"crypt/argon2id"
+	"github.com/1101947/crypt/argon2id"
 )
 
 func TestF(t *testing.T) {

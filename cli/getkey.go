@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 	"golang.org/x/term"
-	"crypt/argon2id"
+	"github.com/1101947/crypt/argon2id"
 )
 
 type cliKeyGetter string

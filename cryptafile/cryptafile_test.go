@@ -9,7 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
-	"crypt/argon2id"
+	"github.com/1101947/crypt/argon2id"
 )
 
 func getFilePath(s string) (string, error) {
