@@ -8,6 +8,10 @@ import (
 
 type cliKeyGetter string
 
+func GetKeyGetter() cliKeyGetter {
+	return cliKeyGetter("")
+}
+
 func (c cliKeyGetter) GetKey(P argon2id.Params) ([]byte, error) {
 	fmt.Println("Provide password: ")
 	s, err := term.ReadPassword(1)
