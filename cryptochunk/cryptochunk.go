@@ -12,7 +12,6 @@ type Crypter interface {
 	GetNonceSize(key []byte) (uint16, error)
 }
 
-
 type CryptChunk struct {
 	In, Out, Key, NonceSource []byte
 	// TODO: consider changing type of ChunkPosition to int

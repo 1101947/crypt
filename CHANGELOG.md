@@ -8,7 +8,10 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 
 ## [Unreleased]
 ## [Current]
+
+## [v2026-09-12_14-59-06Z__77d0e55fbdbc90b3d3af887fa701d14828e602e3]
 ### Changed
+- Remaked project from app to library
 - README.md : rewrote and removed some sections
 - renamed module name from crypt to github.com/1101947/crypt to be able to use with standard go package utils.
 ### Removed
