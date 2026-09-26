@@ -1,4 +1,0 @@
-package cryptachunk
-
-func cryptachunk() {
-}
