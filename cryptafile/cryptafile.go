@@ -430,7 +430,7 @@ func (C *CryptData) afterLoop(l loopData) error {
 	return nil
 }
 
-func (C CryptData) Decrypt() error {
+func (C *CryptData) readHeader() error {
 	var headerBuf [128]byte 
 	readIntoHeaderBuf, err := C.In.Read(headerBuf[:])
 	if err != nil {
@@ -445,6 +445,10 @@ func (C CryptData) Decrypt() error {
 	if err != nil {
 		return fmt.Errorf("Verifying header, got: %w", err)
 	} 
+	return nil
+} 
+
+func (C *CryptData) readSalt() error {
 	saltBuff := make([]byte, int(C.H.ArgonParams.SaltLength)) 
 	readIntoSaltBuff, err := C.In.Read(saltBuff)
 	if err != nil {
@@ -453,16 +457,11 @@ func (C CryptData) Decrypt() error {
 	if readIntoSaltBuff != int(C.H.ArgonParams.SaltLength) {
 		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", C.H.ArgonParams.SaltLength, readIntoSaltBuff)
 	}
+	C.Salt = saltBuff
+	return nil
+}
 
-	argonParams := argon2id.Params{
-		Header: C.H.ArgonParams,
-		Salt: saltBuff,
-	}
-	key, err  := C.KeyGetter.GetKey(argonParams)
-	if err != nil {
-		return fmt.Errorf("Geting key from user, got: %w", err)
-	}
-
+func (C *CryptData) readNonceSource() error {
 	nonceSource := make([]byte, C.H.NonceSourceLen)
 	readIntoNonceSourceBuff, err := C.In.Read(nonceSource)
 	if err != nil {
@@ -472,39 +471,82 @@ func (C CryptData) Decrypt() error {
 		return fmt.Errorf("Read wrong number of bytes. Must have been read %d bytes, but actualy read %d .", C.H.NonceSourceLen, readIntoNonceSourceBuff)
 	}
 	C.Cr.NonceSource = nonceSource
-	cryptoFuncName := string(C.H.EncryptionFunction[:])
-	if cryptoFuncName[:9] == "aes256gcm" {
-		C.Cr.Crypter = aes256gcm.GetAES256GCM()
-	} else if cryptoFuncName == "chacha20poly1305" {
-		C.Cr.Crypter = chacha20poly1305.GetChaCha20Poly1305()
-	} else {
-		return fmt.Errorf("Ivalid encryption function option in header: %s", cryptoFuncName)
-	}
+	return nil
+}
 
-	overhead, err := C.Cr.Crypter.GetOverhead(key)
+func (C *CryptData) beforeDecryptLoop() error {
+	err := C.readHeader()
 	if err != nil {
-		return fmt.Errorf("Getting overhead, got: %w", err)
+		return err
 	}
-	plainDataChunkSize := C.H.ChunkSize - overhead 
+	err = C.readSalt()
+	if err != nil {
+		return err
+	}
+	// C.Cr.Key
+	argonParams := argon2id.Params{
+		Header: C.H.ArgonParams,
+		Salt: C.Salt,
+	}
+	key, err  := C.KeyGetter.GetKey(argonParams)
+	if err != nil {
+		return fmt.Errorf("Geting key from user, got: %w", err)
+	}
+	C.Cr.Key = key
+	// C.Cr.Key
+	err = C.readNonceSource()
+	if err != nil {
+		return err
+	}
+	err = C.setCrypter()
+	if err != nil {
+		return err
+	}
+	err = C.setOverhead()
+	if err != nil {
+		return err
+	}
+	plainDataChunkSize := C.H.ChunkSize - C.H.Overhead 
 	plainBuf := make([]byte, plainDataChunkSize)
+	C.Cr.Out = plainBuf
+	C.Cr.In = make([]byte, C.H.ChunkSize)
+	return nil
+}
 
-	// Its a little bit strange that i redefine c here, maybe redesign
-	C = CryptData{
-		H: C.H,
-		Cr: cryptochunk.CryptChunk{
-			In: make([]byte, C.H.ChunkSize),
-			Out: plainBuf,
-			Key: key,
-			NonceSource: nonceSource,
-			ChunkPosition: 0,
-			Crypter: C.Cr.Crypter,
-		},
-		Salt: saltBuff,
-		KeyGetter: C.KeyGetter,
-		In: C.In,
-		Out: C.Out,
+func (C *CryptData) afterDecryptLoop() error {
+	var readIntoCrypt int
+	var writeToOut int
+	var err error
+	if C.H.LastChunkSize != 0 {
+		readIntoCrypt, err = C.In.Read(C.Cr.In)
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
+		}
+		if readIntoCrypt <= 0 {
+			return fmt.Errorf("Have read invalid number of bytes")
+		} 
+		C.Cr.ChunkPosition = C.Cr.ChunkPosition + 1
+		err = C.Cr.Decrypt()
+		if err != nil {
+			return fmt.Errorf("Decrypting, got: %w", err)
+		}
+		realData := (C.H.LastChunkSize - C.H.Overhead)
+		writeToOut, err = C.Out.Write(C.Cr.Out[:realData])
+		if err != nil {
+			return fmt.Errorf("Writing to output file, got: %w", err)
+		}
+		if writeToOut != len(C.Cr.Out[:realData]) {
+			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+		}
 	}
+	return nil
+}
 
+func (C CryptData) Decrypt() error {
+	err := C.beforeDecryptLoop()
+	if err != nil {
+		return err
+	}
 //	// What about comparison with C.H.NonceSourceLen ?
 //	if readNonceSource != len(C.Cr.NonceSource) {
 //		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(C.Cr.NonceSource))
@@ -540,27 +582,9 @@ func (C CryptData) Decrypt() error {
 			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
 		}
 	}
-	if C.H.LastChunkSize != 0 {
-		readIntoCrypt, err = C.In.Read(C.Cr.In)
-		if err != nil && err != io.EOF {
-			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
-		}
-		if readIntoCrypt <= 0 {
-			return fmt.Errorf("Have read invalid number of bytes")
-		} 
-		C.Cr.ChunkPosition = C.Cr.ChunkPosition + 1
-		err = C.Cr.Decrypt()
-		if err != nil {
-			return fmt.Errorf("Decrypting, got: %w", err)
-		}
-		realData := (C.H.LastChunkSize - C.H.Overhead)
-		writeToOut, err = C.Out.Write(C.Cr.Out[:realData])
-		if err != nil {
-			return fmt.Errorf("Writing to output file, got: %w", err)
-		}
-		if writeToOut != len(C.Cr.Out[:realData]) {
-			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
-		}
+	err = C.afterDecryptLoop()
+	if err != nil {
+		return err
 	}
 	return nil
 }
