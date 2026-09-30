@@ -142,15 +142,12 @@ func (C CryptData) EncryptAndNotify(stage chan CryptStage, prog chan int, errCh 
 	var lastChunkSize uint16
 	var readIntoPlain int
 	var writeToOut int
-	inFileStats, err := C.In.Stat()
+
+	chunkSizePercent, err := calculateChunkSizePercent(C, len(C.Cr.In))
 	if err != nil {
-		errCh <- fmt.Errorf("Getting input file stats, got, %w", err)
+		errCh <- err
 		return 
 	}
-	fileSize := inFileStats.Size()
-	var chunkSizePercent float64
-	chunkSizePercent = ( float64(C.H.ChunkSize) * 100 ) / float64(fileSize)
-
 	var progressCounter float64
 	progressCounter = 0
 	progressCounterNatural := 0
@@ -227,6 +224,16 @@ func (C CryptData) EncryptAndNotify(stage chan CryptStage, prog chan int, errCh 
 	}
 	errCh <- nil
 	return 
+}
+
+func calculateChunkSizePercent(C CryptData, chunkSize int) (float64, error) {
+	inFileStats, err := C.In.Stat()
+	if err != nil {
+		return 0, fmt.Errorf("Getting input file stats, got, %w", err) 
+	}
+	fileSize := inFileStats.Size()
+	chunkSizePercent := ( float64(chunkSize) * 100 ) / float64(fileSize)
+	return chunkSizePercent, nil
 }
 
 func (C *CryptData) process() error {
@@ -430,6 +437,187 @@ func (C *CryptData) afterLoop(l loopData) error {
 	return nil
 }
 
+func (C CryptData) Decrypt() error {
+	err := C.beforeDecryptLoop()
+	if err != nil {
+		return err
+	}
+//	// What about comparison with C.H.NonceSourceLen ?
+//	if readNonceSource != len(C.Cr.NonceSource) {
+//		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(C.Cr.NonceSource))
+//	}
+	var readIntoCrypt int
+	var readIntoPlain int
+	var writeToOut int
+	var chunksPos int
+	chunksAmount := int(C.H.ChunksAmount)
+	for chunksPos=1;chunksPos<=chunksAmount;chunksPos++ {
+		readIntoCrypt, err = C.In.Read(C.Cr.In)
+		// TODO: maybe remove ?
+		if err == io.EOF && readIntoPlain == 0 {
+
+		}
+		if err != nil {
+			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
+		}
+		if readIntoCrypt <= 0 {
+			return fmt.Errorf("Have read invalid number of bytes")
+		} 
+
+		C.Cr.ChunkPosition = uint16(chunksPos)
+		err = C.Cr.Decrypt()
+		if err != nil {
+			return fmt.Errorf("Decrypting, got: %w", err)
+		}
+		writeToOut, err = C.Out.Write(C.Cr.Out)
+		if err != nil {
+			return fmt.Errorf("Writing to output file, got: %w", err)
+		}
+		if writeToOut != len(C.Cr.Out) {
+			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+		}
+	}
+	err = C.afterDecryptLoop()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (C CryptData) DecryptAndNotify(stage chan CryptStage, prog chan int, errCh chan error) {
+	stage <- CryptStage{
+		Stage: 1,
+		Msg: "starting to process crypt data before loop...",
+	}
+	err := C.beforeDecryptLoop()
+	if err != nil {
+		errCh <- err
+		return 
+	}
+//	// What about comparison with C.H.NonceSourceLen ?
+//	if readNonceSource != len(C.Cr.NonceSource) {
+//		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(C.Cr.NonceSource))
+//	}
+	var readIntoCrypt int
+	var readIntoPlain int
+	var writeToOut int
+	var chunksPos int
+	chunksAmount := int(C.H.ChunksAmount)
+
+	chunkSizePercent, err := calculateChunkSizePercent(C, len(C.Cr.In))
+	if err != nil {
+		errCh <- err
+		return 
+	}
+
+	var progressCounter float64
+	progressCounter = 0
+	progressCounterNatural := 0
+	stage <- CryptStage{
+		Stage: 2,
+		Msg: "finished processing crypt data before loop. Start loop...",
+	}
+	for chunksPos=1;chunksPos<=chunksAmount;chunksPos++ {
+		progressCounter += chunkSizePercent
+		if int(progressCounter) > progressCounterNatural {
+			progressCounterNatural = int(progressCounter)
+			if (chunkSizePercent > 1 && (progressCounterNatural % int(chunkSizePercent) == 0)) || chunkSizePercent <= 1 {
+				prog <- progressCounterNatural
+			}
+		}
+		readIntoCrypt, err = C.In.Read(C.Cr.In)
+		// TODO: maybe remove ?
+		if err == io.EOF && readIntoPlain == 0 {
+
+		}
+		if err != nil {
+			close(prog)
+			errCh <- fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
+			return 
+
+		}
+		if readIntoCrypt <= 0 {
+			close(prog)
+			errCh <- fmt.Errorf("Have read invalid number of bytes")
+			return 
+		} 
+
+		C.Cr.ChunkPosition = uint16(chunksPos)
+		err = C.Cr.Decrypt()
+		if err != nil {
+			close(prog)
+			errCh <- fmt.Errorf("Decrypting, got: %w", err)
+			return 
+		}
+		writeToOut, err = C.Out.Write(C.Cr.Out)
+		if err != nil {
+			close(prog)
+			errCh <- fmt.Errorf("Writing to output file, got: %w", err)
+			return 
+		}
+		if writeToOut != len(C.Cr.Out) {
+			close(prog)
+			errCh <- fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
+			return 
+		}
+	}
+	close(prog)
+	stage <- CryptStage{
+		Stage: 3,
+		Msg: "finished loop. Start after loop processing...",
+	}
+	err = C.afterDecryptLoop()
+	if err != nil {
+		errCh <- err
+		return 
+	}
+	stage <- CryptStage{
+		Stage: 4,
+		Msg: "finished after loop processing. Done.",
+	}
+	errCh <- nil
+	return 
+}
+
+func (C *CryptData) beforeDecryptLoop() error {
+	err := C.readHeader()
+	if err != nil {
+		return err
+	}
+	err = C.readSalt()
+	if err != nil {
+		return err
+	}
+	// C.Cr.Key
+	argonParams := argon2id.Params{
+		Header: C.H.ArgonParams,
+		Salt: C.Salt,
+	}
+	key, err  := C.KeyGetter.GetKey(argonParams)
+	if err != nil {
+		return fmt.Errorf("Geting key from user, got: %w", err)
+	}
+	C.Cr.Key = key
+	// C.Cr.Key
+	err = C.readNonceSource()
+	if err != nil {
+		return err
+	}
+	err = C.setCrypter()
+	if err != nil {
+		return err
+	}
+	err = C.setOverhead()
+	if err != nil {
+		return err
+	}
+	plainDataChunkSize := C.H.ChunkSize - C.H.Overhead 
+	plainBuf := make([]byte, plainDataChunkSize)
+	C.Cr.Out = plainBuf
+	C.Cr.In = make([]byte, C.H.ChunkSize)
+	return nil
+}
+
 func (C *CryptData) readHeader() error {
 	var headerBuf [128]byte 
 	readIntoHeaderBuf, err := C.In.Read(headerBuf[:])
@@ -474,44 +662,7 @@ func (C *CryptData) readNonceSource() error {
 	return nil
 }
 
-func (C *CryptData) beforeDecryptLoop() error {
-	err := C.readHeader()
-	if err != nil {
-		return err
-	}
-	err = C.readSalt()
-	if err != nil {
-		return err
-	}
-	// C.Cr.Key
-	argonParams := argon2id.Params{
-		Header: C.H.ArgonParams,
-		Salt: C.Salt,
-	}
-	key, err  := C.KeyGetter.GetKey(argonParams)
-	if err != nil {
-		return fmt.Errorf("Geting key from user, got: %w", err)
-	}
-	C.Cr.Key = key
-	// C.Cr.Key
-	err = C.readNonceSource()
-	if err != nil {
-		return err
-	}
-	err = C.setCrypter()
-	if err != nil {
-		return err
-	}
-	err = C.setOverhead()
-	if err != nil {
-		return err
-	}
-	plainDataChunkSize := C.H.ChunkSize - C.H.Overhead 
-	plainBuf := make([]byte, plainDataChunkSize)
-	C.Cr.Out = plainBuf
-	C.Cr.In = make([]byte, C.H.ChunkSize)
-	return nil
-}
+
 
 func (C *CryptData) afterDecryptLoop() error {
 	var readIntoCrypt int
@@ -538,53 +689,6 @@ func (C *CryptData) afterDecryptLoop() error {
 		if writeToOut != len(C.Cr.Out[:realData]) {
 			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
 		}
-	}
-	return nil
-}
-
-func (C CryptData) Decrypt() error {
-	err := C.beforeDecryptLoop()
-	if err != nil {
-		return err
-	}
-//	// What about comparison with C.H.NonceSourceLen ?
-//	if readNonceSource != len(C.Cr.NonceSource) {
-//		return fmt.Errorf("Number of nonce source bytes read from file: %d differ from length of nonce source buffer: %d", readNonceSource, len(C.Cr.NonceSource))
-//	}
-	var readIntoCrypt int
-	var readIntoPlain int
-	var writeToOut int
-	var chunksPos int
-	chunksAmount := int(C.H.ChunksAmount)
-	for chunksPos=1;chunksPos<=chunksAmount;chunksPos++ {
-		readIntoCrypt, err = C.In.Read(C.Cr.In)
-		// TODO: maybe remove ?
-		if err == io.EOF && readIntoPlain == 0 {
-
-		}
-		if err != nil {
-			return fmt.Errorf("Trying to read bytes from file into buffer, got: %w", err)
-		}
-		if readIntoCrypt <= 0 {
-			return fmt.Errorf("Have read invalid number of bytes")
-		} 
-
-		C.Cr.ChunkPosition = uint16(chunksPos)
-		err = C.Cr.Decrypt()
-		if err != nil {
-			return fmt.Errorf("Decrypting, got: %w", err)
-		}
-		writeToOut, err = C.Out.Write(C.Cr.Out)
-		if err != nil {
-			return fmt.Errorf("Writing to output file, got: %w", err)
-		}
-		if writeToOut != len(C.Cr.Out) {
-			return fmt.Errorf("Writing wrong number of bytes to output file. Should be equal to size of output buffer, but differs.")
-		}
-	}
-	err = C.afterDecryptLoop()
-	if err != nil {
-		return err
 	}
 	return nil
 }

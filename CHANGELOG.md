@@ -8,6 +8,10 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 
 ## [Unreleased]
 ## [Current]
+### Changed
+- Rewrote CryptData.(En/De)crypt functions. Split their bodies up into smaller functions.
+### Added
+- CryptData.(En/De)cryptAndNotify function. (En/De)crypts and sends progress over channel.
 
 ## [v2026-09-12_14-59-06Z__77d0e55fbdbc90b3d3af887fa701d14828e602e3]
 ### Changed
