@@ -153,7 +153,7 @@ func (C CryptData) EncryptAndNotify(stage chan CryptStage, prog chan int, errCh 
 	progressCounterNatural := 0
 	stage <- CryptStage{
 		Stage: 4,
-		Msg: fmt.Sprintf("finished writing header, salt, nonce bytes to file. One chunk is %d%% of input file. Start encrypting chunks..."),
+		Msg: fmt.Sprintf("finished writing header, salt, nonce bytes to file. One chunk is %f%% of input file. Start encrypting chunks...", chunkSizePercent),
 	}
 	for {
 		progressCounter += chunkSizePercent
