@@ -9,6 +9,12 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 ## [Unreleased]
 ## [Current]
 ### Changed
+- wrongly formated fmt.Sprintf in cryptafile in EncryptAndNotify in stage 4
+### Removed
+- cli/getkey_test.go because required manual input
+
+## [v2026-09-30_11-00-11Z__c06d5a3c2cf855c980c1ed1d99d36333972f0b34]
+### Changed
 - Rewrote CryptData.(En/De)crypt functions. Split their bodies up into smaller functions.
 ### Added
 - CryptData.(En/De)cryptAndNotify function. (En/De)crypts and sends progress over channel.
