@@ -29,7 +29,7 @@ Every commit in master branch should contain working code, but to be sure always
 To see semantics, added features, introduced and fixed bugs of any version address to CHANGELOG.md.
 
 # TODO:
-- Extend header fields for chunksize and chunkamount(because chunksamount of uint16 isnt enough for 1024 byte chunks) and add check for file size, so it would through error and not silently encrypt until chunksamount end.
+- add check for file size, so it would through error and not silently encrypt until chunksamount end.
 - Benchmark for crypt vs cryptAndNotify
 - Test scripts to test in vms
 

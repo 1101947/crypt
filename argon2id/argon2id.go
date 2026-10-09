@@ -97,7 +97,7 @@ func Compare(h1, h2 Header) string {
 func (H *Header) Encode(data *[128]byte) {
      	// TODO: check valid start
      	//start := 37
-     	start := 56 
+     	start := 93 
 	end := start + 8
 	binary.LittleEndian.PutUint64(data[start:end], uint64(H.Version))
 
@@ -125,7 +125,7 @@ func (H *Header) Encode(data *[128]byte) {
 func (H *Header) Decode(data *[128]byte) {
      	// TODO: check valid start
 	// start := 58
-     	start := 56
+     	start := 93 
 	end := start + 8
 	H.Version = int64(binary.LittleEndian.Uint64(data[start:end]))
 

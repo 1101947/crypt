@@ -12,7 +12,7 @@ func GetChaCha20Poly1305() ChaCha20Poly1305 {
 	return ChaCha20Poly1305(true)
 }
 
-func (C ChaCha20Poly1305) GetOverhead(key []byte) (uint16, error) {
+func (C ChaCha20Poly1305) GetOverhead(key []byte) (uint64, error) {
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return 0, err
@@ -21,10 +21,10 @@ func (C ChaCha20Poly1305) GetOverhead(key []byte) (uint16, error) {
 	if overhead < 0 {
 		return 0, fmt.Errorf("Invalid overhead value: negative: %d", overhead)
 	}
-	return uint16(overhead), nil
+	return uint64(overhead), nil
 }
 
-func (C ChaCha20Poly1305) GetNonceSize(key []byte) (uint16, error) {
+func (C ChaCha20Poly1305) GetNonceSize(key []byte) (uint64, error) {
 	//aead, err := chacha20poly1305.NewX(key)
 	//if err != nil {
 	//	return 0, err
@@ -35,7 +35,7 @@ func (C ChaCha20Poly1305) GetNonceSize(key []byte) (uint16, error) {
 	if nonceSize < 0 {
 		return 0, fmt.Errorf("Invalid nonce size value: negative: %d", nonceSize)
 	}
-	return uint16(nonceSize), nil
+	return uint64(nonceSize), nil
 }
 
 func (C ChaCha20Poly1305) Encrypt(key, nonce, plainData, cipherData []byte) error {

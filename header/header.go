@@ -41,11 +41,11 @@ type FileHeader struct {
 	IsValid bool
 	IsLittleEndian bool // may be set by user
 	EncryptionFunction [EncryptionFunctionNameSize]byte // may be set by user 
-	NonceSourceLen uint16
-	ChunkSize uint16 // may be set by user 
-	ChunksAmount uint16
-	LastChunkSize uint16
-	Overhead uint16
+	NonceSourceLen uint64
+	ChunkSize uint64 // may be set by user 
+	ChunksAmount uint64
+	LastChunkSize uint64
+	Overhead uint64
 	// TODO: rename to ArgonHeader
 	ArgonParams argon2id.Header // some fields may be set by user
 }
@@ -117,7 +117,7 @@ func Compare(h1, h2 FileHeader) string {
 		s += "LastChunkSize "
 	}
 	if h1.Overhead != h2.Overhead {
-		s += " Overhead "
+		s += fmt.Sprintf(" Overhead: 1:%d  2:%d  ", h1.Overhead, h2.Overhead)
 	}
 	argonCmpString := argon2id.Compare(h1.ArgonParams, h2.ArgonParams)
 	if argonCmpString != "" {
@@ -156,24 +156,24 @@ func (F *FileHeader) Encode(data *[128]byte) {
 	_ = copy(data[start:end], F.EncryptionFunction[:]) 
 
 	start = end
-	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.NonceSourceLen))
+	end = start + 8 
+	binary.LittleEndian.PutUint64(data[start:end], uint64(F.NonceSourceLen))
 
 	start = end
-	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunkSize))
+	end = start + 8 
+	binary.LittleEndian.PutUint64(data[start:end], uint64(F.ChunkSize))
 
 	start = end
-	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.ChunksAmount))
+	end = start + 8 
+	binary.LittleEndian.PutUint64(data[start:end], uint64(F.ChunksAmount))
 
 	start = end
-	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.LastChunkSize))
+	end = start + 8 
+	binary.LittleEndian.PutUint64(data[start:end], uint64(F.LastChunkSize))
 
 	start = end
-	end = start + 2 
-	binary.LittleEndian.PutUint16(data[start:end], uint16(F.Overhead))
+	end = start + 8 
+	binary.LittleEndian.PutUint64(data[start:end], uint64(F.Overhead))
 
 	start = end
 	end = start + 34 
@@ -199,27 +199,28 @@ func (F *FileHeader) Decode(data *[128]byte) {
 	_ = copy( F.EncryptionFunction[:], data[start:end]) 
 
 	start = end
-	end = start + 2 
-	F.NonceSourceLen = binary.LittleEndian.Uint16(data[start:end])
+	end = start + 8 
+	F.NonceSourceLen = binary.LittleEndian.Uint64(data[start:end])
 
 	start = end
-	end = start + 2 
-	F.ChunkSize = binary.LittleEndian.Uint16(data[start:end])
+	end = start + 8 
+	F.ChunkSize = binary.LittleEndian.Uint64(data[start:end])
 
 	start = end
-	end = start + 2 
-	F.ChunksAmount = binary.LittleEndian.Uint16(data[start:end])
+	end = start + 8 
+	F.ChunksAmount = binary.LittleEndian.Uint64(data[start:end])
 
 	start = end
-	end = start + 2 
-	F.LastChunkSize = binary.LittleEndian.Uint16(data[start:end])
+	end = start + 8 
+	F.LastChunkSize = binary.LittleEndian.Uint64(data[start:end])
 
 	start = end
-	end = start + 2 
-	F.Overhead = binary.LittleEndian.Uint16(data[start:end])
+	end = start + 8 
+	F.Overhead = binary.LittleEndian.Uint64(data[start:end])
 
 	start = end
-	end = start + 2 
+	//end = start + 2 
+	end = start + 8 
 	(F.ArgonParams).Decode(data)
 }
 

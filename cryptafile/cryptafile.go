@@ -54,9 +54,9 @@ func (C CryptData) Encrypt() error {
 	if err != nil {
 		return err
 	}
-	var chunksAmount uint16
-	chunksAmount = uint16(0)
-	var lastChunkSize uint16
+	var chunksAmount uint64
+	chunksAmount = uint64(0)
+	var lastChunkSize uint64
 	var readIntoPlain int
 	var writeToOut int
 	for {
@@ -137,9 +137,9 @@ func (C CryptData) EncryptAndNotify(stage chan CryptStage, prog chan int, errCh 
 		errCh <- err
 		return 
 	}
-	var chunksAmount uint16
-	chunksAmount = uint16(0)
-	var lastChunkSize uint16
+	var chunksAmount uint64
+	chunksAmount = uint64(0)
+	var lastChunkSize uint64
 	var readIntoPlain int
 	var writeToOut int
 
@@ -382,8 +382,8 @@ func (C CryptData) writeNonceBytes() error {
 }
 
 type loopData struct {
-	chunksAmount uint16
-	lastChunkSize uint16
+	chunksAmount uint64
+	lastChunkSize uint64
 	readIntoPlain int
 	writeToOut int
 	headerBuf [128]byte
@@ -397,7 +397,7 @@ func (C *CryptData) afterLoop(l loopData) error {
 	var err error
 	var writeToOut int
 	if l.readIntoPlain > 0 {
-		l.lastChunkSize = uint16(l.readIntoPlain) + C.H.Overhead 
+		l.lastChunkSize = uint64(l.readIntoPlain) + C.H.Overhead 
 		C.Cr.ChunkPosition = l.chunksAmount + 1
 		err = C.Cr.Encrypt()
 		if err != nil {
@@ -464,7 +464,7 @@ func (C CryptData) Decrypt() error {
 			return fmt.Errorf("Have read invalid number of bytes")
 		} 
 
-		C.Cr.ChunkPosition = uint16(chunksPos)
+		C.Cr.ChunkPosition = uint64(chunksPos)
 		err = C.Cr.Decrypt()
 		if err != nil {
 			return fmt.Errorf("Decrypting, got: %w", err)
@@ -542,7 +542,7 @@ func (C CryptData) DecryptAndNotify(stage chan CryptStage, prog chan int, errCh 
 			return 
 		} 
 
-		C.Cr.ChunkPosition = uint16(chunksPos)
+		C.Cr.ChunkPosition = uint64(chunksPos)
 		err = C.Cr.Decrypt()
 		if err != nil {
 			close(prog)

@@ -8,6 +8,10 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 
 ## [Unreleased]
 ## [Current]
+### [Rewrite]
+- changed uint16 header fields to uint64, so (en/de)cryption of files with bigger size would be supported(Do i need header fields other than chunksize and chunkamount to be bigger that uint16?)
+
+## [release_v2026-10-02_09-32-34Z__4d0ab567cc3076eb529137755e778aa98027e134]
 ### Changed
 - wrongly formated fmt.Sprintf in cryptafile in EncryptAndNotify in stage 4
 ### Removed

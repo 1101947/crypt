@@ -14,7 +14,7 @@ func GetAES256GCM() AES256GCM {
 	return AES256GCM(true)
 }
 
-func (A AES256GCM) GetOverhead(key []byte) (uint16, error) {
+func (A AES256GCM) GetOverhead(key []byte) (uint64, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return 0, err
@@ -27,10 +27,10 @@ func (A AES256GCM) GetOverhead(key []byte) (uint16, error) {
 	if overhead < 0 {
 		return 0, fmt.Errorf("Invalid overhead value: negative: %d", overhead)
 	}
-	return uint16(overhead), nil
+	return uint64(overhead), nil
 }
 
-func (A AES256GCM) GetNonceSize(key []byte) (uint16, error) {
+func (A AES256GCM) GetNonceSize(key []byte) (uint64, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return 0, err
@@ -43,7 +43,7 @@ func (A AES256GCM) GetNonceSize(key []byte) (uint16, error) {
 	if nonceSize < 0 {
 		return 0, fmt.Errorf("Invalid nonceSize value: negative: %d", nonceSize)
 	}
-	return uint16(nonceSize), nil
+	return uint64(nonceSize), nil
 }
 
 func (A AES256GCM) Encrypt(key, nonce, plainData, cipherData []byte) error {
