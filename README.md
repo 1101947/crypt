@@ -29,6 +29,7 @@ Every commit in master branch should contain working code, but to be sure always
 To see semantics, added features, introduced and fixed bugs of any version address to CHANGELOG.md.
 
 # TODO:
+- add posix atributes and acl save functionality
 - add check for file size, so it would through error and not silently encrypt until chunksamount end.
 - Benchmark for crypt vs cryptAndNotify
 - Test scripts to test in vms
