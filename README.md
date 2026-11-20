@@ -11,7 +11,8 @@ git clone https://github.com/1101947/crypt.git
 ```
 
 # License
-This project is licensed uder GPLv3, for more information see LICENSE.txt
+This project is licensed uder GPL-3, for more information see LICENSE.txt
+Copyright (C) 2026 10411 <10411@mail.ru>
 
 # Changelog
 This project uses changelog file(see CHANGELOG.md).
@@ -29,10 +30,13 @@ Every commit in master branch should contain working code, but to be sure always
 To see semantics, added features, introduced and fixed bugs of any version address to CHANGELOG.md.
 
 # TODO:
+
 - add posix atributes and acl save functionality
 - add check for file size, so it would through error and not silently encrypt until chunksamount end.
 - Benchmark for crypt vs cryptAndNotify
 - Test scripts to test in vms
+- encrypt multiple files/aka archive
+- encrypt disks ?
 
 - Think about offset handling when reading/writing files. Consider safe feature: allow to set file offset for C.In in cryptofile.(En/De)crypt function. The problem is that if you have writen to \*os.File and then try to read, you will get EOF, because \*os.File offset is equal to filesize and when you start reading it will start reading from the end, obviously will read 0 bytes and will return EOF. So in order to prevent or control this standard behavior default offset will be set to 0 and before reading file Seek(offset(which is 0 by default), 0) will be performed. Should we check offset to be 0 before reading/writing or should we allow to specify offset explicitly and perform seeking ?
 - Test against end of file(in chunk, salt, nonce).
@@ -53,7 +57,7 @@ To see semantics, added features, introduced and fixed bugs of any version addre
 - add: getting and passing files via ipc(unix domain socket with fd(sock_setqpacket) passing, creation of in-memory file and passing its descriptor( memfd_create + scm_rights), pipes)
 - add: extended format with table(or merkle tree) at the end(like zip)(will allow to store chunks metadata and use it for managing passowrd or other uses)
 - add: deniable encryption
-- add: totp
+- add: totp(2fa)
 - add: one time pad
 - set up exit codes
 - add: ability to seat units for bytes sizes(64KB, 1MB) and use arithmetics(--memory=1024\*1024kb)
