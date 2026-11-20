@@ -8,7 +8,10 @@ This project is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1
 
 ## [Unreleased]
 ## [Current]
-### [Rewrite]
+- Fixed LICENSE.txt file
+
+## [release_2026-10-09_17-12-41Z__00a9715138e3ad7a7d24d1cd33732dc8aba4bfe8]
+### Changed
 - changed uint16 header fields to uint64, so (en/de)cryption of files with bigger size would be supported(Do i need header fields other than chunksize and chunkamount to be bigger that uint16?)
 
 ## [release_v2026-10-02_09-32-34Z__4d0ab567cc3076eb529137755e778aa98027e134]
